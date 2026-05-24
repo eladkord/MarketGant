@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { zoom: 1.35; }
+    html { zoom: 1.35; height: 100%; overflow: hidden; }
 
     /* ══ THEME VARIABLES ══ */
     :root {
@@ -1235,7 +1235,7 @@ function startEditTitle(event, id) {
   const oldTitle = item.title;
   const inp = document.createElement('input');
   inp.className = 'item-title-input'; inp.value = item.title;
-  span.replaceWith(inp); inp.focus(); inp.select();
+  span.replaceWith(inp); inp.focus({ preventScroll: true }); inp.select();
   const save = () => {
     const newTitle = inp.value.trim() || item.title;
     if (newTitle !== oldTitle) { item.title = newTitle; fsUpdate(id, {title: newTitle}); logAction('Edited item', newTitle, '✏️'); }
@@ -1520,6 +1520,8 @@ function addInlineItem() {
   fsSet(id, newItem);
   logAction('Added item', newItem.title, '➕');
   renderItems();
+  const list = document.getElementById('itemsList');
+  list.scrollTop = 0;
   requestAnimationFrame(() => {
     const card = document.querySelector(`[data-id="${id}"]`);
     if (!card) return;
@@ -1597,11 +1599,17 @@ function renderCalendar() {
   document.getElementById('calMonthTitle').textContent=MN[start.getMonth()]+' '+start.getFullYear();
   if (weeks <= 6) {
     wrapper.classList.remove('scrollable');
-    // Measure actual available pixels — avoids flex/overflow circular dependency
     const dayH  = (wrapper.querySelector('.day-headers') || {offsetHeight:26}).offsetHeight;
-    const avail = Math.max(wrapper.clientHeight - dayH - 22, weeks * 80); // 22 = 8+14 padding
-    grid.style.flex = 'none';
-    grid.style.height = avail + 'px';
+    const avail = wrapper.clientHeight - dayH - 22; // 22 = 8+14 padding
+    if (avail > weeks * 60) {
+      // Wrapper laid out — set explicit pixel height
+      grid.style.flex = 'none';
+      grid.style.height = avail + 'px';
+    } else {
+      // Wrapper not yet laid out or too small — let flex handle it
+      grid.style.flex = '1';
+      grid.style.height = '';
+    }
     grid.style.gridTemplateRows = `repeat(${weeks}, 1fr)`;
   } else {
     wrapper.classList.add('scrollable');
