@@ -393,8 +393,7 @@
     .range-date-label { font-size: 11px; color: var(--text-dim); background: var(--card); border: 1px solid var(--border); padding: 3px 10px; border-radius: 20px; font-weight: 600; }
     .custom-range { display: none; align-items: center; gap: 6px; }
     .custom-range input { width: 126px; padding: 4px 8px; font-size: 11px; }
-    .calendar-grid-wrapper { flex: 1; padding: 8px 12px 0; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
-    .cal-bottom-bar { flex-shrink: 0; height: 18px; background: var(--surface); border-top: 1px solid var(--border); margin: 0 -12px; }
+    .calendar-grid-wrapper { flex: 1; padding: 8px 12px 14px; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
     .calendar-grid-wrapper::-webkit-scrollbar { width: 3px; }
     .calendar-grid-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     .day-headers { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 4px; flex-shrink: 0; }
@@ -774,7 +773,6 @@
         <div class="day-header">SAT</div>
       </div>
       <div class="calendar-grid" id="calendarGrid"></div>
-      <div class="cal-bottom-bar"></div>
     </div>
   </div>
 
@@ -1538,10 +1536,18 @@ function renderCalendar() {
   document.getElementById('rangeDateLabel').textContent=fmtDate(start)+' — '+fmtDate(endD);
   const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   document.getElementById('calMonthTitle').textContent=MN[start.getMonth()]+' '+start.getFullYear();
-  const ROW_H = weeks <= 2 ? 140 : weeks <= 4 ? 120 : weeks <= 6 ? 108 : 100;
-  grid.style.flex = 'none';
-  grid.style.height = (weeks * ROW_H) + 'px';
-  grid.style.gridTemplateRows = `repeat(${weeks}, ${ROW_H}px)`;
+  if (weeks <= 6) {
+    // Flex-fill: grid stretches to fill wrapper, rows divide space evenly
+    grid.style.flex = '1';
+    grid.style.height = '';
+    grid.style.gridTemplateRows = `repeat(${weeks}, 1fr)`;
+  } else {
+    // Large range: fixed row heights, wrapper scrolls
+    const ROW_H = 100;
+    grid.style.flex = 'none';
+    grid.style.height = (weeks * ROW_H) + 'px';
+    grid.style.gridTemplateRows = `repeat(${weeks}, ${ROW_H}px)`;
+  }
   const shown=ITEMS.filter(i=>i.section==='content'||i.section==='archive');
   let html='';
   for(let i=0;i<total;i++){
