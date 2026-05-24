@@ -393,8 +393,9 @@
     .range-date-label { font-size: 11px; color: var(--text-dim); background: var(--card); border: 1px solid var(--border); padding: 3px 10px; border-radius: 20px; font-weight: 600; }
     .custom-range { display: none; align-items: center; gap: 6px; }
     .custom-range input { width: 126px; padding: 4px 8px; font-size: 11px; }
-    .calendar-grid-wrapper { flex: 1; padding: 8px 12px 10px; display: flex; flex-direction: column; overflow: hidden; }
-    .calendar-grid-wrapper.scrollable { overflow-y: auto; }
+    .calendar-grid-wrapper { flex: 1; padding: 8px 12px 10px; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+    .calendar-grid-wrapper::-webkit-scrollbar { width: 3px; }
+    .calendar-grid-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     .day-headers { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 4px; flex-shrink: 0; }
     .day-header  { text-align: center; font-size: 10px; font-weight: 700; color: var(--text-dim); letter-spacing: 0.5px; padding: 2px; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; flex: 1; }
@@ -598,6 +599,46 @@
     }
     .toast.show { transform: translateX(-50%) translateY(0); }
     * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+    /* ══ SORT DROPDOWN ══ */
+    .sort-drop-btn {
+      display: flex; align-items: center; gap: 4px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 3px 9px; font-size: 11px; font-weight: 600; color: var(--text-dim);
+      cursor: pointer; font-family: inherit; transition: all 0.15s; flex-shrink: 0;
+    }
+    .sort-drop-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .sort-drop-btn.open  { border-color: var(--accent); color: var(--accent); }
+    .sort-drop-btn .s-label { color: var(--text); }
+    .sort-drop-btn .chevron { font-size: 8px; transition: transform 0.15s; }
+    .sort-drop-btn.open .chevron { transform: rotate(180deg); }
+    .sort-drop-menu {
+      position: fixed; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; box-shadow: 0 8px 24px var(--shadow); z-index: 600;
+      display: none; flex-direction: column; min-width: 130px; padding: 4px;
+    }
+    .sort-drop-menu.open { display: flex; }
+    .sort-drop-item {
+      padding: 7px 12px; font-size: 12px; font-weight: 500; border-radius: 6px;
+      cursor: pointer; color: var(--text-dim); transition: all 0.1s; font-family: inherit;
+      background: none; border: none; text-align: left;
+    }
+    .sort-drop-item:hover { background: var(--card); color: var(--text); }
+    .sort-drop-item.active { color: var(--accent); font-weight: 700; background: var(--accent-dim); }
+
+    /* Card drag-over target (list reorder) */
+    .item-card.drop-target-card {
+      border-color: var(--accent); border-style: dashed;
+      background: var(--accent-dim); transform: translateY(-1px);
+    }
+
+    /* Today button in calendar header */
+    .today-nav-btn {
+      padding: 3px 9px; border-radius: 6px; font-size: 10px; font-weight: 700;
+      cursor: pointer; border: 1px solid var(--border); background: var(--card);
+      color: var(--text-dim); font-family: inherit; transition: all 0.15s; letter-spacing: 0.3px;
+    }
+    .today-nav-btn:hover { border-color: var(--red); color: var(--red); background: #ef444410; }
   </style>
 </head>
 <body>
@@ -663,6 +704,7 @@
       <button class="add-btn" onclick="openModal(null)">+</button>
     </div>
     <div class="filter-bar" id="filterBar">
+      <button class="sort-drop-btn" id="sortDropBtn" onclick="toggleSortDrop(event)">Sort: <span class="s-label" id="sortDropLabel">Custom</span> <span class="chevron">▼</span></button>
       <button class="filter-pill active" onclick="setFilter('all',this)">All</button>
       <button class="filter-pill" onclick="setFilter('scheduled',this)">Scheduled</button>
       <button class="filter-pill" onclick="setFilter('ready',this)">Ready</button>
@@ -702,6 +744,7 @@
     <div class="calendar-header">
       <button class="cal-nav" onclick="shiftView(-1)">‹</button>
       <button class="cal-nav" onclick="shiftView(1)">›</button>
+      <button class="today-nav-btn" onclick="goToday()">Today</button>
       <span class="cal-month-title" id="calMonthTitle">May 2026</span>
       <button class="range-drop-btn" id="rangeDropBtn" onclick="toggleRangeDrop(event)">
         <span id="rangeDropLabel">Month</span>
@@ -749,6 +792,16 @@
     <button class="stab" onclick="switchSettingsTab('history',this)">History</button>
   </div>
   <div class="settings-body" id="settingsBody"></div>
+</div>
+
+<!-- ══ SORT DROPDOWN ══ -->
+<div class="sort-drop-menu" id="sortDropMenu">
+  <button class="sort-drop-item active" data-s="custom"    onclick="setSort('custom')">Custom</button>
+  <button class="sort-drop-item"        data-s="date-asc"  onclick="setSort('date-asc')">Date ↑</button>
+  <button class="sort-drop-item"        data-s="date-desc" onclick="setSort('date-desc')">Date ↓</button>
+  <button class="sort-drop-item"        data-s="status"    onclick="setSort('status')">Status</button>
+  <button class="sort-drop-item"        data-s="priority"  onclick="setSort('priority')">Priority</button>
+  <button class="sort-drop-item"        data-s="title"     onclick="setSort('title')">Title A–Z</button>
 </div>
 
 <!-- ══ CONTEXT MENU ══ -->
@@ -892,6 +945,7 @@ async function doLogin() {
       if (snap.exists) {
         if (snap.data().sharedPass)   SHARED_PASS   = snap.data().sharedPass;
         if (snap.data().allowedUsers) ALLOWED_USERS = snap.data().allowedUsers;
+        if (snap.data().customOrder)  customOrder   = snap.data().customOrder;
       }
     } catch(e) { /* use hardcoded fallback */ }
   }
@@ -942,6 +996,7 @@ function startListeners() {
   if (!db) {
     // Offline mode — use seed data locally
     ITEMS = SEED_ITEMS.map(i => ({...i}));
+    try { const s = localStorage.getItem('mg_customOrder'); if(s) customOrder = JSON.parse(s); } catch(e) {}
     updateAll();
     return;
   }
@@ -989,6 +1044,7 @@ let currentFilter   = 'all';
 let currentItemId   = null;
 let dragItemId      = null;
 let dragSource      = null;
+let dragOverId      = null;
 let ctxItemId       = null;
 let currentType     = 'post';
 let currentStatus   = 'writing';
@@ -1001,6 +1057,8 @@ let customViewStart = null;
 let customViewEnd   = null;
 let showingTrash    = false;
 let currentSettingsTab = 'general';
+let currentSort     = 'custom';
+let customOrder     = [];
 
 const TODAY = new Date(2026, 4, 24);
 const TYPE_LABELS   = { post:'Post', reel:'Reel', story:'Story', general:'General' };
@@ -1009,7 +1067,7 @@ const PLAT_ICONS    = { FB:'📘', IG:'📸', ALL:'📡', MAIL:'📧', WA:'💬'
 const HISTORY_ICONS = { added:'➕', edited:'✏️', deleted:'🗑', moved:'📦', starred:'⭐', scheduled:'📅', archived:'🗂', login:'🔑', logout:'🔒', duplicate:'⎘' };
 
 function logAction(action, itemTitle, icon) {
-  if (!currentUser) return;
+  if (!currentUser || !db) return;
   const entry = { ts: fmtNow(), user: currentUser, action, title: itemTitle, icon: icon || '📝', createdAt: firebase.firestore.FieldValue.serverTimestamp() };
   db.collection('history').add(entry);
 }
@@ -1090,6 +1148,7 @@ function renderItems() {
     else if (currentFilter === 'starred')   items = items.filter(i => i.starred);
     else if (currentFilter !== 'all')       items = items.filter(i => i.status === currentFilter);
   }
+  items = sortItems(items);
   if (currentSection === 'archive') {
     const pub   = items.filter(i => i.status === 'uploaded');
     const past  = items.filter(i => i.status === 'missed');
@@ -1114,6 +1173,9 @@ function renderCard(item) {
     <div class="item-card${item.starred?' starred':''}${sel?' selected':''}${multiSelectMode?' multi-select-mode':''}"
          data-id="${item.id}" draggable="${!multiSelectMode && !isTrash}"
          ondragstart="onListDragStart(event,${item.id})"
+         ondragover="onCardDragOver(event,${item.id})"
+         ondragleave="onCardDragLeave(event,${item.id})"
+         ondrop="onCardDrop(event,${item.id})"
          onclick="onCardClick(event,${item.id})">
       <div class="item-card-top">
         <div class="select-circle${sel?' checked':''}" onclick="toggleSelect(event,${item.id})">${sel?'✓':''}</div>
@@ -1274,6 +1336,58 @@ function setFilter(f, btn) {
   btn.classList.add('active'); renderItems();
 }
 
+// ══ SORT ══
+function sortItems(arr) {
+  if (currentSort === 'custom' && customOrder.length) {
+    return [...arr].sort((a, b) => {
+      let ai = customOrder.indexOf(a.id), bi = customOrder.indexOf(b.id);
+      if (ai === -1) ai = customOrder.length;
+      if (bi === -1) bi = customOrder.length;
+      return ai - bi;
+    });
+  }
+  if (currentSort === 'date-asc') return [...arr].sort((a, b) => {
+    const ad = (a.month||99)*100+(a.day||99), bd = (b.month||99)*100+(b.day||99);
+    return ad - bd;
+  });
+  if (currentSort === 'date-desc') return [...arr].sort((a, b) => {
+    const ad = (a.month||0)*100+(a.day||0), bd = (b.month||0)*100+(b.day||0);
+    return bd - ad;
+  });
+  if (currentSort === 'status') {
+    const o = ['ready','writing','waiting','uploaded','postponed','missed'];
+    return [...arr].sort((a, b) => o.indexOf(a.status) - o.indexOf(b.status));
+  }
+  if (currentSort === 'priority') {
+    const o = ['high','medium','low'];
+    return [...arr].sort((a, b) => o.indexOf(a.priority) - o.indexOf(b.priority));
+  }
+  if (currentSort === 'title') return [...arr].sort((a, b) => a.title.localeCompare(b.title));
+  return arr;
+}
+function toggleSortDrop(e) {
+  e.stopPropagation();
+  const btn = document.getElementById('sortDropBtn'), menu = document.getElementById('sortDropMenu');
+  const open = menu.classList.contains('open');
+  if (open) { menu.classList.remove('open'); btn.classList.remove('open'); return; }
+  const r = btn.getBoundingClientRect();
+  menu.style.left = r.left + 'px';
+  menu.style.top  = (r.bottom + 4) + 'px';
+  menu.classList.add('open'); btn.classList.add('open');
+}
+function setSort(sort) {
+  currentSort = sort;
+  updateSortUI();
+  document.getElementById('sortDropMenu').classList.remove('open');
+  document.getElementById('sortDropBtn').classList.remove('open');
+  renderItems();
+}
+function updateSortUI() {
+  const LABELS = { custom:'Custom', 'date-asc':'Date ↑', 'date-desc':'Date ↓', status:'Status', priority:'Priority', title:'Title A–Z' };
+  document.getElementById('sortDropLabel').textContent = LABELS[currentSort] || currentSort;
+  document.querySelectorAll('.sort-drop-item').forEach(b => b.classList.toggle('active', b.dataset.s === currentSort));
+}
+
 // ══ DRAG — LIST ══
 function onListDragStart(event, id) {
   dragItemId = id; dragSource = 'list';
@@ -1288,11 +1402,71 @@ function onListDragOver(event) {
 function onListDragLeave() { document.getElementById('itemsList').classList.remove('list-drop-active'); }
 function onDropToList(event) {
   document.getElementById('itemsList').classList.remove('list-drop-active');
-  if (dragSource !== 'calendar') return;
-  const item = ITEMS.find(i => i.id === dragItemId);
-  if (item) { item.day=null; item.month=null; fsUpdate(dragItemId,{day:null,month:null}); logAction('Unscheduled',item.title,'📅'); }
-  dragItemId=null; dragSource=null;
-  updateAll(); toast('Removed from calendar');
+  clearDragOverCard();
+  if (dragSource === 'calendar') {
+    const item = ITEMS.find(i => i.id === dragItemId);
+    if (item) { item.day=null; item.month=null; fsUpdate(dragItemId,{day:null,month:null}); logAction('Unscheduled',item.title,'📅'); }
+    dragItemId=null; dragSource=null;
+    updateAll(); toast('Removed from calendar');
+  } else if (dragSource === 'list') {
+    cleanupListDrag();
+    renderItems();
+  }
+}
+
+// ══ DRAG — LIST REORDER ══
+function onCardDragOver(event, id) {
+  if (dragSource !== 'list' || dragItemId === id) return;
+  event.preventDefault(); event.stopPropagation();
+  if (dragOverId !== id) {
+    clearDragOverCard();
+    dragOverId = id;
+    const el = document.querySelector(`[data-id="${id}"]`);
+    if (el) el.classList.add('drop-target-card');
+  }
+}
+function onCardDragLeave(event, id) {
+  if (event.relatedTarget && event.currentTarget.contains(event.relatedTarget)) return;
+  if (dragOverId === id) clearDragOverCard();
+}
+function onCardDrop(event, targetId) {
+  event.preventDefault(); event.stopPropagation();
+  if (dragSource !== 'list') return;
+  clearDragOverCard();
+  if (dragItemId && dragItemId !== targetId) {
+    reorderCustom(dragItemId, targetId);
+    currentSort = 'custom';
+    updateSortUI();
+    saveCustomOrder();
+  }
+  cleanupListDrag();
+  renderItems();
+}
+function clearDragOverCard() {
+  if (dragOverId) {
+    const el = document.querySelector(`[data-id="${dragOverId}"]`);
+    if (el) el.classList.remove('drop-target-card');
+    dragOverId = null;
+  }
+}
+function cleanupListDrag() {
+  const el = document.querySelector(`[data-id="${dragItemId}"]`);
+  if (el) el.classList.remove('dragging');
+  dragItemId = null; dragSource = null;
+}
+function reorderCustom(fromId, toId) {
+  const sectionIds = ITEMS.filter(i => i.section === currentSection).map(i => i.id);
+  if (!customOrder.length) customOrder = [...sectionIds];
+  sectionIds.forEach(id => { if (!customOrder.includes(id)) customOrder.push(id); });
+  if (!customOrder.includes(fromId)) customOrder.push(fromId);
+  const fi = customOrder.indexOf(fromId);
+  customOrder.splice(fi, 1);
+  const ti = customOrder.indexOf(toId);
+  customOrder.splice(ti, 0, fromId);
+}
+function saveCustomOrder() {
+  if (db) db.collection('config').doc('settings').set({ customOrder }, { merge: true });
+  try { localStorage.setItem('mg_customOrder', JSON.stringify(customOrder)); } catch(e) {}
 }
 
 // ══ CALENDAR ══
@@ -1300,17 +1474,34 @@ function getViewWindow() {
   if (viewRange === 'custom' && customViewStart) {
     const s = new Date(customViewStart); s.setDate(s.getDate()-s.getDay());
     const e = new Date(customViewEnd||customViewStart); e.setDate(e.getDate()+(6-e.getDay()));
-    return { start:s, weeks:Math.max(1,Math.round((e-s)/604800000)+1) };
+    return { start:s, weeks:Math.max(1,Math.ceil((e-s)/(7*86400000))+1) };
   }
+  const today = new Date(TODAY);
   let start, weeks;
-  if      (viewRange==='week')  { start=new Date(2026,4,24); weeks=1; }
-  else if (viewRange==='14d')   { start=new Date(2026,4,17); weeks=2; }
-  else if (viewRange==='month') { start=new Date(2026,4,3);  weeks=4; }
-  else if (viewRange==='60d')   { start=new Date(2026,4,3);  weeks=9; }
-  else                           { start=new Date(2026,4,3);  weeks=4; }
-  start.setDate(start.getDate() + viewOffset*7*weeks);
+  if (viewRange === 'week') {
+    start = new Date(today); start.setDate(today.getDate()-today.getDay()); weeks = 1;
+    start.setDate(start.getDate() + viewOffset * 7);
+  } else if (viewRange === '14d') {
+    start = new Date(today); start.setDate(today.getDate()-today.getDay()); weeks = 2;
+    start.setDate(start.getDate() + viewOffset * 14);
+  } else if (viewRange === 'month') {
+    // Navigate by calendar month, pixel-perfect: show every day of the month
+    const m = new Date(today.getFullYear(), today.getMonth() + viewOffset, 1);
+    start = new Date(m); start.setDate(m.getDate() - m.getDay());
+    const lastDay = new Date(m.getFullYear(), m.getMonth()+1, 0);
+    const endDay  = new Date(lastDay); endDay.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
+    weeks = Math.ceil((endDay - start) / (7*86400000));
+    return { start, weeks };
+  } else if (viewRange === '60d') {
+    start = new Date(today); start.setDate(today.getDate()-today.getDay()); weeks = 9;
+    start.setDate(start.getDate() + viewOffset * 63);
+  } else {
+    start = new Date(today); start.setDate(today.getDate()-today.getDay()); weeks = 4;
+    start.setDate(start.getDate() + viewOffset * 28);
+  }
   return { start, weeks };
 }
+function goToday() { viewOffset = 0; renderCalendar(); }
 function shiftView(dir) { viewOffset += dir; renderCalendar(); }
 function toggleRangeDrop(e) {
   e.stopPropagation();
@@ -1345,11 +1536,10 @@ function renderCalendar() {
   document.getElementById('rangeDateLabel').textContent=fmtDate(start)+' — '+fmtDate(endD);
   const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   document.getElementById('calMonthTitle').textContent=MN[start.getMonth()]+' '+start.getFullYear();
-  const scrollable=weeks>5;
-  wrapper.classList.toggle('scrollable',scrollable);
-  grid.style.flex=scrollable?'none':'1';
-  grid.style.height=scrollable?(weeks*100)+'px':'';
-  grid.style.gridTemplateRows=`repeat(${weeks},${scrollable?'100px':'1fr'})`;
+  const ROW_H = weeks <= 2 ? 140 : weeks <= 4 ? 120 : weeks <= 6 ? 108 : 100;
+  grid.style.flex = 'none';
+  grid.style.height = (weeks * ROW_H) + 'px';
+  grid.style.gridTemplateRows = `repeat(${weeks}, ${ROW_H}px)`;
   const shown=ITEMS.filter(i=>i.section==='content'||i.section==='archive');
   let html='';
   for(let i=0;i<total;i++){
@@ -1588,6 +1778,10 @@ document.addEventListener('click',e=>{
   const menu=document.getElementById('rangeDropMenu'), btn=document.getElementById('rangeDropBtn');
   if(menu && btn && !menu.contains(e.target) && !btn.contains(e.target)){
     menu.classList.remove('open'); btn.classList.remove('open');
+  }
+  const smenu=document.getElementById('sortDropMenu'), sbtn=document.getElementById('sortDropBtn');
+  if(smenu && sbtn && !smenu.contains(e.target) && !sbtn.contains(e.target)){
+    smenu.classList.remove('open'); sbtn.classList.remove('open');
   }
 });
 
