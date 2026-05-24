@@ -652,17 +652,37 @@
       <div class="lg-name">MarketGant</div>
       <div class="lg-sub">Fusion Culture</div>
     </div>
-    <input class="login-field" type="email" id="loginEmail" placeholder="Email address" onkeydown="if(event.key==='Enter')doLogin()">
-    <div class="pass-wrap">
-      <input class="login-field" type="password" id="loginPass" placeholder="Password" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
-      <button class="eye-btn" type="button" onclick="togglePassView(this)" tabindex="-1">👁</button>
+    <!-- Main login view -->
+    <div id="loginView" style="display:contents">
+      <input class="login-field" type="email" id="loginEmail" placeholder="Email address" onkeydown="if(event.key==='Enter')doLogin()">
+      <div class="pass-wrap" id="loginPassWrap">
+        <input class="login-field" type="password" id="loginPass" placeholder="Password" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="eye-btn" type="button" onclick="togglePassView('loginPass',this)" tabindex="-1">👁</button>
+      </div>
+      <label class="remember-row" for="rememberMe">
+        <input type="checkbox" id="rememberMe" checked>
+        <span>Remember me</span>
+      </label>
+      <button class="login-btn" id="loginBtn" onclick="doLogin()">LETS GO 😋</button>
+      <div class="login-error" id="loginError"></div>
     </div>
-    <label class="remember-row" for="rememberMe">
-      <input type="checkbox" id="rememberMe" checked>
-      <span>Remember me</span>
-    </label>
-    <button class="login-btn" id="loginBtn" onclick="doLogin()">LETS GO 😋</button>
-    <div class="login-error" id="loginError"></div>
+    <!-- Set-password view (first login) -->
+    <div id="setPassView" style="display:none;width:100%;display:none;flex-direction:column;gap:22px;align-items:center">
+      <div class="login-logo" style="margin-bottom:0">
+        <div class="lg-name" id="setPassName" style="font-size:26px"></div>
+        <div class="lg-sub" style="color:var(--text-dim);text-transform:none;letter-spacing:0">Choose your password to get started</div>
+      </div>
+      <div class="pass-wrap">
+        <input class="login-field" type="password" id="setPass1" placeholder="New password" autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('setPass2').focus()">
+        <button class="eye-btn" type="button" onclick="togglePassView('setPass1',this)" tabindex="-1">👁</button>
+      </div>
+      <div class="pass-wrap">
+        <input class="login-field" type="password" id="setPass2" placeholder="Confirm password" autocomplete="new-password" onkeydown="if(event.key==='Enter')saveFirstPassword()">
+        <button class="eye-btn" type="button" onclick="togglePassView('setPass2',this)" tabindex="-1">👁</button>
+      </div>
+      <button class="login-btn" onclick="saveFirstPassword()">Set Password & Sign In</button>
+      <div class="login-error" id="setPassError"></div>
+    </div>
   </div>
 </div>
 
@@ -926,70 +946,120 @@ function fsDelete(id)       { if(db) db.collection('items').doc(id.toString()).d
 function fsSet(id, data)    { if(db) db.collection('items').doc(id.toString()).set(data); }
 
 // ══ AUTH ══
-const ADMIN_EMAIL    = 'eladkord@gmail.com';
-let   SHARED_PASS    = 'fc2026';
-let ALLOWED_USERS    = [ADMIN_EMAIL, 'noa@fusionculture.com', 'dan@fusionculture.com'];
-let currentUser      = null;
-let isAdmin          = false;
-let lightMode        = false;
+const ADMIN_EMAIL = 'eladkord@gmail.com';
+let USERS = [
+  { name: 'Elad', email: 'eladkord@gmail.com',      pass: 'fc2026' },
+  { name: 'Noa',  email: 'noa@fusionculture.com',   pass: null },
+  { name: 'Dan',  email: 'dan@fusionculture.com',   pass: null }
+];
+let currentUser = null;
+let isAdmin     = false;
+let lightMode   = false;
+let _pendingFirstLoginUser = null; // holds user object during set-password flow
 
-function togglePassView(btn) {
-  const inp = document.getElementById('loginPass');
+function togglePassView(inputId, btn) {
+  const inp = document.getElementById(inputId);
   const show = inp.type === 'password';
   inp.type = show ? 'text' : 'password';
   btn.textContent = show ? '🙈' : '👁';
 }
 
+async function loadUsersFromFirestore() {
+  if (!db) return;
+  try {
+    const snap = await db.collection('config').doc('settings').get();
+    if (!snap.exists) return;
+    const data = snap.data();
+    if (data.users) {
+      USERS = data.users;
+    } else if (data.allowedUsers) {
+      // Migrate from old shared-password model
+      const sharedPass = data.sharedPass || 'fc2026';
+      USERS = data.allowedUsers.map(email => ({
+        name: email.split('@')[0],
+        email: email.toLowerCase(),
+        pass: email.toLowerCase() === ADMIN_EMAIL ? sharedPass : null
+      }));
+      db.collection('config').doc('settings').set({ users: USERS }, { merge: true });
+    }
+    if (data.customOrder) customOrder = data.customOrder;
+  } catch(e) {}
+}
+
+function saveUsersToFirestore() {
+  if (db) db.collection('config').doc('settings').set({ users: USERS }, { merge: true });
+}
+
 async function doLogin() {
   const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-  const pass  = document.getElementById('loginPass').value.trim();
   const err   = document.getElementById('loginError');
-  if (!email || !pass) { err.textContent = 'Please enter email and password'; return; }
+  if (!email) { err.textContent = 'Please enter your email'; return; }
 
-  if (db) {
-    try {
-      const snap = await db.collection('config').doc('settings').get();
-      if (snap.exists) {
-        if (snap.data().sharedPass)   SHARED_PASS   = snap.data().sharedPass;
-        if (snap.data().allowedUsers) ALLOWED_USERS = snap.data().allowedUsers;
-        if (snap.data().customOrder)  customOrder   = snap.data().customOrder;
-      }
-    } catch(e) { /* use hardcoded fallback */ }
+  await loadUsersFromFirestore();
+
+  const user = USERS.find(u => u.email.toLowerCase() === email);
+  if (!user) { err.textContent = 'This email is not authorized'; return; }
+
+  if (!user.pass) {
+    // First login — show set-password flow
+    _pendingFirstLoginUser = user;
+    document.getElementById('loginView').style.display = 'none';
+    const spv = document.getElementById('setPassView');
+    spv.style.display = 'flex';
+    document.getElementById('setPassName').textContent = `Hey ${user.name}! 👋`;
+    document.getElementById('setPass1').focus();
+    return;
   }
 
-  if (pass !== SHARED_PASS) { err.textContent = 'Incorrect password'; return; }
-  if (!ALLOWED_USERS.map(e=>e.toLowerCase()).includes(email) && email !== ADMIN_EMAIL) {
-    err.textContent = 'This email is not authorized'; return;
-  }
+  const pass = document.getElementById('loginPass').value.trim();
+  if (!pass) { err.textContent = 'Please enter your password'; return; }
+  if (pass !== user.pass) { err.textContent = 'Incorrect password'; return; }
 
-  if (document.getElementById('rememberMe').checked) {
-    localStorage.setItem('mg_email', email);
-    localStorage.setItem('mg_session', JSON.stringify({ email, ts: Date.now() }));
+  completeLogin(user);
+}
+
+async function saveFirstPassword() {
+  const p1  = document.getElementById('setPass1').value.trim();
+  const p2  = document.getElementById('setPass2').value.trim();
+  const err = document.getElementById('setPassError');
+  if (!p1 || p1.length < 4) { err.textContent = 'Password must be at least 4 characters'; return; }
+  if (p1 !== p2) { err.textContent = 'Passwords do not match'; return; }
+
+  _pendingFirstLoginUser.pass = p1;
+  saveUsersToFirestore();
+  logAction('Set password (first login)', _pendingFirstLoginUser.email, '🔑');
+  completeLogin(_pendingFirstLoginUser);
+}
+
+function completeLogin(user) {
+  currentUser = user.email;
+  isAdmin     = user.email === ADMIN_EMAIL;
+
+  if (document.getElementById('rememberMe')?.checked) {
+    localStorage.setItem('mg_session', JSON.stringify({ email: user.email, name: user.name, ts: Date.now() }));
   } else {
-    localStorage.removeItem('mg_email');
     localStorage.removeItem('mg_session');
   }
-  currentUser = email;
-  isAdmin     = email === ADMIN_EMAIL;
 
-  const btn  = document.getElementById('loginBtn');
-  const card = document.querySelector('.login-card');
-  btn.textContent = '🚀 Let\'s go!';
-  btn.classList.add('going');
-  setTimeout(() => {
-    card.classList.add('bye');
-    setTimeout(() => {
-      document.getElementById('loginScreen').classList.add('hidden');
-      document.getElementById('app').style.display = 'flex';
-      card.classList.remove('bye');
-      btn.textContent = 'LETS GO 😋';
-      btn.classList.remove('going');
-      startListeners();
-      logAction('Logged in', '', '🔑');
-    }, 360);
-  }, 420);
-  document.getElementById('userLabel').textContent = email.split('@')[0];
+  document.getElementById('userLabel').textContent = user.name || user.email.split('@')[0];
   document.getElementById('adminBadge').style.display = isAdmin ? 'inline' : 'none';
+
+  const card = document.querySelector('.login-card');
+  card.classList.add('bye');
+  setTimeout(() => {
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('app').style.display = 'flex';
+    card.classList.remove('bye');
+    // Reset login form for next time
+    document.getElementById('loginView').style.display = 'contents';
+    document.getElementById('setPassView').style.display = 'none';
+    document.getElementById('loginPass').value = '';
+    document.getElementById('setPass1').value  = '';
+    document.getElementById('setPass2').value  = '';
+    _pendingFirstLoginUser = null;
+    startListeners();
+    logAction('Logged in', '', '🔑');
+  }, 360);
 }
 
 function doLogout() {
@@ -1003,6 +1073,9 @@ function doLogout() {
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPass').value  = '';
   document.getElementById('loginError').textContent = '';
+  document.getElementById('loginView').style.display  = 'contents';
+  document.getElementById('setPassView').style.display = 'none';
+  _pendingFirstLoginUser = null;
 }
 
 function startListeners() {
@@ -1677,40 +1750,37 @@ function renderSettingsTab(tab) {
           </label>
         </div>
       </div>
-      ${isAdmin?`
-      <div class="setting-group">
-        <div class="setting-group-title">Security (Admin Only)</div>
-        <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:10px">
-          <div class="setting-row-label">Change Shared Password</div>
-          <div style="display:flex;gap:8px;width:100%">
-            <input class="settings-input" type="password" id="newPass" placeholder="New password">
-            <button class="settings-btn primary" onclick="changePassword()">Update</button>
-          </div>
-        </div>
-      </div>`:''}`;
+      `;
   } else if(tab==='users') {
     if(!isAdmin){
       body.innerHTML=`<div class="admin-only-notice">🔒 User management is only available to the admin account.</div>`; return;
     }
-    const userRows=ALLOWED_USERS.map(email=>`
+    const userRows=USERS.map(u=>`
       <div class="user-row">
-        <div class="user-avatar">${email[0].toUpperCase()}</div>
+        <div class="user-avatar">${(u.name||u.email)[0].toUpperCase()}</div>
         <div class="user-info">
-          <div class="user-email">${email}</div>
-          <div class="user-role">${email===ADMIN_EMAIL?'Admin':'Member'}</div>
+          <div class="user-email">${u.name||u.email.split('@')[0]} <span style="font-size:13px;color:var(--text-dim);font-weight:400">&lt;${u.email}&gt;</span></div>
+          <div class="user-role" style="display:flex;align-items:center;gap:6px">
+            ${u.email===ADMIN_EMAIL?'<span style="color:var(--gold);font-weight:700;font-size:12px">ADMIN</span>':'Member'}
+            ${u.pass?'<span style="color:var(--green);font-size:12px">● Password set</span>':'<span style="color:var(--yellow);font-size:12px">○ Awaiting first login</span>'}
+          </div>
         </div>
-        ${email!==ADMIN_EMAIL?`<button class="user-delete" onclick="removeUser('${email}')" title="Remove">✕</button>`:'<span style="font-size:11px;color:var(--gold);font-weight:700">ADMIN</span>'}
+        ${u.email!==ADMIN_EMAIL?`<button class="user-delete" onclick="removeUser('${u.email}')" title="Remove user">✕</button>`:''}
       </div>`).join('');
     body.innerHTML=`
       <div class="setting-group">
-        <div class="setting-group-title">Team Members (${ALLOWED_USERS.length})</div>
+        <div class="setting-group-title">Team Members (${USERS.length})</div>
         ${userRows}
       </div>
       <div class="setting-group">
         <div class="setting-group-title">Add New User</div>
-        <div class="add-user-row">
-          <input class="settings-input" type="email" id="newUserEmail" placeholder="email@domain.com" onkeydown="if(event.key==='Enter')addUser()">
-          <button class="settings-btn primary" onclick="addUser()">Add</button>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <input class="settings-input" type="text"  id="newUserName"  placeholder="Full name" onkeydown="if(event.key==='Enter')document.getElementById('newUserEmail').focus()">
+          <div style="display:flex;gap:8px">
+            <input class="settings-input" type="email" id="newUserEmail" placeholder="email@domain.com" onkeydown="if(event.key==='Enter')addUser()">
+            <button class="settings-btn primary" onclick="addUser()">Add</button>
+          </div>
+          <div style="font-size:13px;color:var(--text-dim)">They'll set their own password on first login.</div>
         </div>
       </div>`;
   } else if(tab==='history') {
@@ -1734,28 +1804,26 @@ function toggleTheme(light) {
   lightMode=light; document.body.classList.toggle('light',light);
   logAction(light?'Switched to light mode':'Switched to dark mode','','🎨');
 }
-function changePassword() {
-  const p=document.getElementById('newPass').value.trim();
-  if(!p||p.length<4){ toast('Password too short'); return; }
-  SHARED_PASS=p;
-  db.collection('config').doc('settings').set({sharedPass:p},{merge:true});
-  toast('Password updated ✓'); logAction('Changed shared password','','🔑');
-}
 function addUser() {
-  const email=document.getElementById('newUserEmail').value.trim().toLowerCase();
-  if(!email||!email.includes('@')){ toast('Invalid email'); return; }
-  if(ALLOWED_USERS.map(e=>e.toLowerCase()).includes(email)){ toast('User already exists'); return; }
-  ALLOWED_USERS.push(email);
-  db.collection('config').doc('settings').set({allowedUsers:ALLOWED_USERS},{merge:true});
-  logAction('Added user',email,'➕');
-  toast(`Added ${email}`); renderSettingsTab('users');
+  const name  = (document.getElementById('newUserName')?.value||'').trim();
+  const email = (document.getElementById('newUserEmail')?.value||'').trim().toLowerCase();
+  if (!email || !email.includes('@')) { toast('Invalid email'); return; }
+  if (!name) { toast('Please enter a name'); return; }
+  if (USERS.find(u => u.email.toLowerCase() === email)) { toast('User already exists'); return; }
+  USERS.push({ name, email, pass: null });
+  saveUsersToFirestore();
+  logAction('Added user', `${name} <${email}>`, '➕');
+  toast(`Added ${name}`);
+  renderSettingsTab('users');
 }
 function removeUser(email) {
-  if(email===ADMIN_EMAIL){ toast('Cannot remove admin'); return; }
-  ALLOWED_USERS=ALLOWED_USERS.filter(e=>e!==email);
-  db.collection('config').doc('settings').set({allowedUsers:ALLOWED_USERS},{merge:true});
-  logAction('Removed user',email,'🗑');
-  toast(`Removed ${email}`); renderSettingsTab('users');
+  if (email === ADMIN_EMAIL) { toast('Cannot remove admin'); return; }
+  const u = USERS.find(u => u.email === email);
+  USERS = USERS.filter(u => u.email !== email);
+  saveUsersToFirestore();
+  logAction('Removed user', email, '🗑');
+  toast(`Removed ${u?.name || email}`);
+  renderSettingsTab('users');
 }
 
 // ══ MODAL ══
@@ -1853,27 +1921,25 @@ document.addEventListener('click',e=>{
   }
 });
 
-// ══ INIT: auto-login from session or pre-fill email ══
+// ══ INIT: auto-login from session ══
 (function(){
   const raw = localStorage.getItem('mg_session');
   if (raw) {
     try {
-      const { email, ts } = JSON.parse(raw);
+      const { email, name, ts } = JSON.parse(raw);
       if (Date.now() - ts < 7 * 86400000) { // 7-day session
         currentUser = email; isAdmin = email === ADMIN_EMAIL;
-        document.getElementById('userLabel').textContent = email.split('@')[0];
+        const displayName = name || USERS.find(u=>u.email===email)?.name || email.split('@')[0];
+        document.getElementById('userLabel').textContent = displayName;
         document.getElementById('adminBadge').style.display = isAdmin ? 'inline' : 'none';
         document.getElementById('loginScreen').classList.add('hidden');
         document.getElementById('app').style.display = 'flex';
-        // refresh session timestamp
-        localStorage.setItem('mg_session', JSON.stringify({ email, ts: Date.now() }));
+        localStorage.setItem('mg_session', JSON.stringify({ email, name: displayName, ts: Date.now() }));
         startListeners();
         return;
       }
     } catch(e) {}
   }
-  const saved = localStorage.getItem('mg_email');
-  if (saved) { document.getElementById('loginEmail').value = saved; document.getElementById('rememberMe').checked = true; }
 })();
 
 // ══ INIT ══
