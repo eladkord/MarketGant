@@ -177,6 +177,7 @@
     }
     .sec-tab:hover { color: var(--text); }
     .sec-tab.active { background: var(--bg); border-color: var(--border); border-bottom-color: var(--bg); color: var(--text); }
+    .sec-tab.drag-over { border-color: var(--accent) !important; color: var(--accent) !important; background: var(--accent-dim) !important; }
     .sec-tab .cnt { margin-left: 4px; font-size: 9px; font-weight: 700; background: var(--border); color: var(--text-dim); padding: 1px 5px; border-radius: 10px; }
     .sec-tab.active .cnt { background: var(--accent); color: white; }
     .add-btn {
@@ -198,7 +199,7 @@
     .filter-pill:hover { border-color: var(--accent); color: var(--text); }
     .filter-pill.active { background: var(--accent); border-color: var(--accent); color: white; }
     .items-list {
-      flex: 1; overflow-y: auto; padding: 8px;
+      flex: 1; min-height: 0; overflow-y: auto; padding: 8px;
       display: flex; flex-direction: column; gap: 6px; transition: background 0.15s;
     }
     .items-list::-webkit-scrollbar { width: 3px; }
@@ -657,7 +658,7 @@
       <button class="eye-btn" type="button" onclick="togglePassView(this)" tabindex="-1">👁</button>
     </div>
     <label class="remember-row" for="rememberMe">
-      <input type="checkbox" id="rememberMe">
+      <input type="checkbox" id="rememberMe" checked>
       <span>Remember me</span>
     </label>
     <button class="login-btn" id="loginBtn" onclick="doLogin()">LETS GO 😋</button>
@@ -699,10 +700,15 @@
   <!-- LEFT PANEL -->
   <div class="left-panel" id="leftPanel">
     <div class="section-tabs">
-      <button class="sec-tab active" data-sec="content" onclick="switchSection('content',this)">Content <span class="cnt" id="cnt-content">0</span></button>
-      <button class="sec-tab"        data-sec="backlog" onclick="switchSection('backlog',this)">Backlog <span class="cnt" id="cnt-backlog">0</span></button>
-      <button class="sec-tab"        data-sec="archive" onclick="switchSection('archive',this)">Archive <span class="cnt" id="cnt-archive">0</span></button>
-      <button class="add-btn" onclick="openModal(null)">+</button>
+      <button class="sec-tab active" data-sec="content" onclick="switchSection('content',this)"
+              ondragover="onSecTabDragOver(event,'content')" ondragleave="onSecTabDragLeave(event)" ondrop="onSecTabDrop(event,'content')">Content <span class="cnt" id="cnt-content">0</span></button>
+      <button class="sec-tab" data-sec="backlog" onclick="switchSection('backlog',this)"
+              ondragover="onSecTabDragOver(event,'backlog')" ondragleave="onSecTabDragLeave(event)" ondrop="onSecTabDrop(event,'backlog')">Backlog <span class="cnt" id="cnt-backlog">0</span></button>
+      <button class="sec-tab" data-sec="archive" onclick="switchSection('archive',this)"
+              ondragover="onSecTabDragOver(event,'archive')" ondragleave="onSecTabDragLeave(event)" ondrop="onSecTabDrop(event,'archive')">Archive <span class="cnt" id="cnt-archive">0</span></button>
+      <button class="sec-tab" data-sec="trash"   onclick="switchSection('trash',this)"
+              ondragover="onSecTabDragOver(event,'trash')"   ondragleave="onSecTabDragLeave(event)" ondrop="onSecTabDrop(event,'trash')">🗑 <span class="cnt" id="cnt-trash">0</span></button>
+      <button class="add-btn" onclick="addInlineItem()">+</button>
     </div>
     <div class="filter-bar" id="filterBar">
       <button class="sort-drop-btn" id="sortDropBtn" onclick="toggleSortDrop(event)">Sort: <span class="s-label" id="sortDropLabel">Custom</span> <span class="chevron">▼</span></button>
@@ -956,8 +962,13 @@ async function doLogin() {
     err.textContent = 'This email is not authorized'; return;
   }
 
-  if (document.getElementById('rememberMe').checked) localStorage.setItem('mg_email', email);
-  else localStorage.removeItem('mg_email');
+  if (document.getElementById('rememberMe').checked) {
+    localStorage.setItem('mg_email', email);
+    localStorage.setItem('mg_session', JSON.stringify({ email, ts: Date.now() }));
+  } else {
+    localStorage.removeItem('mg_email');
+    localStorage.removeItem('mg_session');
+  }
   currentUser = email;
   isAdmin     = email === ADMIN_EMAIL;
 
@@ -986,6 +997,7 @@ function doLogout() {
   if (unsubHistory) { unsubHistory(); unsubHistory = null; }
   seeded = false; currentUser = null; isAdmin = false;
   ITEMS = []; HISTORY = [];
+  localStorage.removeItem('mg_session');
   document.getElementById('app').style.display = 'none';
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('loginEmail').value = '';
@@ -1089,7 +1101,9 @@ function updateStats() {
     document.getElementById('cnt-'+s).textContent = ITEMS.filter(i => i.section === s).length
   );
   const trashN = ITEMS.filter(i => i.section === 'deleted').length;
-  document.getElementById('trashCount').textContent = trashN > 0 ? `(${trashN})` : '';
+  document.getElementById('cnt-trash').textContent = trashN;
+  const trashCountEl = document.getElementById('trashCount');
+  if (trashCountEl) trashCountEl.textContent = trashN > 0 ? `(${trashN})` : '';
 }
 
 // ══ SECTION SWITCH ══
@@ -1099,10 +1113,9 @@ function switchSection(sec, btn) {
   document.querySelectorAll('.sec-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   document.querySelectorAll('.filter-pill').forEach(p => { p.classList.remove('active'); if(p.textContent.trim()==='All') p.classList.add('active'); });
-  document.getElementById('filterBar').style.display  = sec === 'content' ? 'flex' : 'none';
-  document.getElementById('trashBtnArea').classList.toggle('visible', sec === 'archive');
-  document.getElementById('trashHeader').classList.remove('visible');
-  document.getElementById('trashViewBtn').classList.remove('active');
+  document.getElementById('filterBar').style.display = sec === 'content' ? 'flex' : 'none';
+  document.getElementById('trashBtnArea').style.display = 'none';
+  document.getElementById('trashHeader').classList.toggle('visible', sec === 'trash');
   updateAll();
 }
 
@@ -1121,21 +1134,24 @@ function exitTrash() {
 }
 function emptyTrash() {
   const toDelete = ITEMS.filter(i => i.section === 'deleted');
+  if (!toDelete.length) return;
   const n = toDelete.length;
-  const batch = db.batch();
-  toDelete.forEach(i => batch.delete(db.collection('items').doc(i.id.toString())));
-  batch.commit();
+  if (db) {
+    const batch = db.batch();
+    toDelete.forEach(i => batch.delete(db.collection('items').doc(i.id.toString())));
+    batch.commit();
+  }
   ITEMS = ITEMS.filter(i => i.section !== 'deleted');
   logAction('Emptied trash', `${n} items permanently deleted`, '🗑');
   toast(`Permanently deleted ${n} items`);
-  exitTrash(); updateAll();
+  updateAll();
 }
 
 // ══ RENDER ITEMS ══
 function renderItems() {
   const list = document.getElementById('itemsList');
 
-  if (showingTrash) {
+  if (currentSection === 'trash') {
     const trashItems = ITEMS.filter(i => i.section === 'deleted');
     list.innerHTML = trashItems.length
       ? trashItems.map(renderCard).join('')
@@ -1470,6 +1486,48 @@ function saveCustomOrder() {
   try { localStorage.setItem('mg_customOrder', JSON.stringify(customOrder)); } catch(e) {}
 }
 
+// ══ DRAG — SECTION TABS ══
+function onSecTabDragOver(event, sec) {
+  if (dragSource !== 'list') return;
+  event.preventDefault(); event.stopPropagation();
+  event.currentTarget.classList.add('drag-over');
+}
+function onSecTabDragLeave(event) {
+  event.currentTarget.classList.remove('drag-over');
+}
+function onSecTabDrop(event, sec) {
+  event.currentTarget.classList.remove('drag-over');
+  if (dragSource !== 'list' || !dragItemId) return;
+  const item = ITEMS.find(i => i.id === dragItemId);
+  const targetSec = sec === 'trash' ? 'deleted' : sec;
+  if (item && item.section !== targetSec) {
+    item.section = targetSec;
+    fsUpdate(item.id, { section: targetSec });
+    logAction(targetSec === 'deleted' ? 'Deleted item' : `Moved to ${sec}`, item.title, targetSec === 'deleted' ? '🗑' : '📦');
+    toast(`Moved to ${sec}`);
+  }
+  cleanupListDrag(); updateAll();
+}
+
+// ══ INLINE ITEM CREATE ══
+function addInlineItem() {
+  const id = Date.now();
+  const sec = currentSection === 'trash' ? 'content' : currentSection;
+  const newItem = { id, title: 'Untitled', type: 'post', status: 'writing', priority: 'medium',
+    platform: 'IG', time: '18:00', caption: '', hashtags: '', notes: '', driveLink: '',
+    section: sec, starred: false, day: null, month: null };
+  ITEMS.unshift(newItem);
+  fsSet(id, newItem);
+  logAction('Added item', newItem.title, '➕');
+  renderItems();
+  requestAnimationFrame(() => {
+    const card = document.querySelector(`[data-id="${id}"]`);
+    if (!card) return;
+    const titleSpan = card.querySelector('.item-title');
+    if (titleSpan) startEditTitle({ stopPropagation: ()=>{}, currentTarget: titleSpan }, id);
+  });
+}
+
 // ══ CALENDAR ══
 function getViewWindow() {
   if (viewRange === 'custom' && customViewStart) {
@@ -1538,18 +1596,18 @@ function renderCalendar() {
   const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   document.getElementById('calMonthTitle').textContent=MN[start.getMonth()]+' '+start.getFullYear();
   if (weeks <= 6) {
-    // overflow:hidden removes circular flex/overflow dependency — 1fr rows fill cleanly
     wrapper.classList.remove('scrollable');
-    grid.style.flex = '1';
-    grid.style.height = '';
+    // Measure actual available pixels — avoids flex/overflow circular dependency
+    const dayH  = (wrapper.querySelector('.day-headers') || {offsetHeight:26}).offsetHeight;
+    const avail = Math.max(wrapper.clientHeight - dayH - 22, weeks * 80); // 22 = 8+14 padding
+    grid.style.flex = 'none';
+    grid.style.height = avail + 'px';
     grid.style.gridTemplateRows = `repeat(${weeks}, 1fr)`;
   } else {
-    // Large range: fixed heights, wrapper scrolls
     wrapper.classList.add('scrollable');
-    const ROW_H = 100;
     grid.style.flex = 'none';
-    grid.style.height = (weeks * ROW_H) + 'px';
-    grid.style.gridTemplateRows = `repeat(${weeks}, ${ROW_H}px)`;
+    grid.style.height = (weeks * 100) + 'px';
+    grid.style.gridTemplateRows = `repeat(${weeks}, 100px)`;
   }
   const shown=ITEMS.filter(i=>i.section==='content'||i.section==='archive');
   let html='';
@@ -1796,12 +1854,33 @@ document.addEventListener('click',e=>{
   }
 });
 
-// ══ INIT: pre-fill remembered email ══
-(function(){ const e=localStorage.getItem('mg_email'); if(e){ document.getElementById('loginEmail').value=e; document.getElementById('rememberMe').checked=true; } })();
+// ══ INIT: auto-login from session or pre-fill email ══
+(function(){
+  const raw = localStorage.getItem('mg_session');
+  if (raw) {
+    try {
+      const { email, ts } = JSON.parse(raw);
+      if (Date.now() - ts < 7 * 86400000) { // 7-day session
+        currentUser = email; isAdmin = email === ADMIN_EMAIL;
+        document.getElementById('userLabel').textContent = email.split('@')[0];
+        document.getElementById('adminBadge').style.display = isAdmin ? 'inline' : 'none';
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('app').style.display = 'flex';
+        // refresh session timestamp
+        localStorage.setItem('mg_session', JSON.stringify({ email, ts: Date.now() }));
+        startListeners();
+        return;
+      }
+    } catch(e) {}
+  }
+  const saved = localStorage.getItem('mg_email');
+  if (saved) { document.getElementById('loginEmail').value = saved; document.getElementById('rememberMe').checked = true; }
+})();
 
 // ══ INIT ══
 function updateAll(){ updateStats(); renderItems(); renderCalendar(); }
 document.getElementById('filterBar').style.display='flex';
+window.addEventListener('resize', () => { if (currentUser) renderCalendar(); });
 </script>
 </body>
 </html>
