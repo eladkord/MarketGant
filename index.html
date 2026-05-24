@@ -628,6 +628,27 @@
     .sort-drop-item:hover { background: var(--card); color: var(--text); }
     .sort-drop-item.active { color: var(--accent); font-weight: 700; background: var(--accent-dim); }
 
+    /* Filter dropdown button */
+    .filter-drop-btn {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 11px;
+      padding: 4px 12px; font-size: 15px; font-weight: 600; color: var(--text-dim);
+      cursor: pointer; font-family: inherit; transition: all 0.15s; flex-shrink: 0;
+    }
+    .filter-drop-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-drop-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .filter-drop-btn.open   { border-color: var(--accent); color: var(--accent); }
+    .filter-drop-btn .chevron { font-size: 11px; transition: transform 0.15s; }
+    .filter-drop-btn.open .chevron { transform: rotate(180deg); }
+
+    /* Filter checkbox items */
+    .filter-check-item {
+      cursor: pointer; display: flex; align-items: center; gap: 10px; user-select: none;
+    }
+    .filter-check-item input[type=checkbox] {
+      accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; cursor: pointer;
+    }
+
     /* Card drag-over target (list reorder) */
     .item-card.drop-target-card {
       border-color: var(--accent); border-style: dashed;
@@ -732,13 +753,8 @@
     </div>
     <div class="filter-bar" id="filterBar">
       <button class="sort-drop-btn" id="sortDropBtn" onclick="toggleSortDrop(event)">Sort: <span class="s-label" id="sortDropLabel">Custom</span> <span class="chevron">▼</span></button>
-      <button class="filter-pill active" onclick="setFilter('all',this)">All</button>
-      <button class="filter-pill" onclick="setFilter('scheduled',this)">Scheduled</button>
-      <button class="filter-pill" onclick="setFilter('ready',this)">Ready</button>
-      <button class="filter-pill" onclick="setFilter('writing',this)">NeedText</button>
-      <button class="filter-pill" onclick="setFilter('waiting',this)">Waiting</button>
-      <button class="filter-pill" onclick="setFilter('missed',this)">Missed</button>
-      <button class="filter-pill" onclick="setFilter('starred',this)">⭐ Starred</button>
+      <button class="filter-drop-btn" id="filterDropBtn" onclick="toggleFilterDrop(event)"><span id="filterDropLabel">Filter</span> <span class="chevron">▼</span></button>
+      <button class="filter-pill" id="noDateBtn" onclick="toggleNoDate()">No Date</button>
     </div>
     <!-- Trash header (when viewing trash) -->
     <div class="trash-header" id="trashHeader">
@@ -819,6 +835,18 @@
     <button class="stab" onclick="switchSettingsTab('history',this)">History</button>
   </div>
   <div class="settings-body" id="settingsBody"></div>
+</div>
+
+<!-- ══ FILTER DROPDOWN ══ -->
+<div class="sort-drop-menu" id="filterDropMenu" style="min-width:190px">
+  <label class="sort-drop-item filter-check-item" data-f="scheduled"><input type="checkbox" value="scheduled"> Scheduled</label>
+  <label class="sort-drop-item filter-check-item" data-f="ready"><input type="checkbox" value="ready"> ✅ Ready</label>
+  <label class="sort-drop-item filter-check-item" data-f="writing"><input type="checkbox" value="writing"> ✍️ NeedText</label>
+  <label class="sort-drop-item filter-check-item" data-f="waiting"><input type="checkbox" value="waiting"> ⏳ Waiting</label>
+  <label class="sort-drop-item filter-check-item" data-f="missed"><input type="checkbox" value="missed"> ❌ Missed</label>
+  <label class="sort-drop-item filter-check-item" data-f="starred"><input type="checkbox" value="starred"> ⭐ Starred</label>
+  <div class="fm-divider" style="margin:4px 0"></div>
+  <button class="sort-drop-item" style="color:var(--text-dim);font-size:14px" onclick="clearFilters()">Clear filters</button>
 </div>
 
 <!-- ══ SORT DROPDOWN ══ -->
@@ -1126,7 +1154,9 @@ let HISTORY = [];
 
 // ══ STATE ══
 let currentSection  = 'content';
-let currentFilter   = 'all';
+let currentFilter   = 'all'; // kept for compatibility
+let activeFilters   = new Set(); // multi-select filter values
+let filterNoDate    = false;
 let currentItemId   = null;
 let dragItemId      = null;
 let dragSource      = null;
@@ -1181,7 +1211,7 @@ function updateStats() {
 
 // ══ SECTION SWITCH ══
 function switchSection(sec, btn) {
-  currentSection = sec; currentFilter = 'all'; showingTrash = false;
+  currentSection = sec; currentFilter = 'all'; showingTrash = false; resetFilters();
   exitMultiSelect();
   document.querySelectorAll('.sec-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
@@ -1234,9 +1264,17 @@ function renderItems() {
 
   let items = ITEMS.filter(i => i.section === currentSection);
   if (currentSection === 'content') {
-    if      (currentFilter === 'scheduled') items = items.filter(i => i.day !== null);
-    else if (currentFilter === 'starred')   items = items.filter(i => i.starred);
-    else if (currentFilter !== 'all')       items = items.filter(i => i.status === currentFilter);
+    if (activeFilters.size > 0) {
+      items = items.filter(item => {
+        for (const f of activeFilters) {
+          if (f === 'scheduled' && item.day != null) return true;
+          if (f === 'starred'   && item.starred)     return true;
+          if (item.status === f)                     return true;
+        }
+        return false;
+      });
+    }
+    if (filterNoDate) items = items.filter(i => i.day == null);
   }
   items = sortItems(items);
   if (currentSection === 'archive') {
@@ -1420,10 +1458,64 @@ function ctxAction(action) {
 }
 
 // ══ FILTERS ══
-function setFilter(f, btn) {
-  currentFilter = f;
-  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active'); renderItems();
+function toggleFilterDrop(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('filterDropMenu');
+  const btn  = document.getElementById('filterDropBtn');
+  const open = menu.classList.toggle('open');
+  btn.classList.toggle('open', open);
+  if (open) {
+    const r = btn.getBoundingClientRect();
+    menu.style.top  = (r.bottom + 4) + 'px';
+    menu.style.left = r.left + 'px';
+    // Sync checkboxes to current state
+    menu.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.checked = activeFilters.has(cb.value);
+      cb.onchange = () => {
+        if (cb.checked) activeFilters.add(cb.value);
+        else activeFilters.delete(cb.value);
+        updateFilterUI(); renderItems();
+      };
+    });
+  }
+}
+function toggleNoDate() {
+  filterNoDate = !filterNoDate;
+  document.getElementById('noDateBtn').classList.toggle('active', filterNoDate);
+  renderItems();
+}
+function clearFilters() {
+  activeFilters.clear();
+  filterNoDate = false;
+  document.getElementById('noDateBtn').classList.remove('active');
+  document.getElementById('filterDropMenu').querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+  updateFilterUI(); renderItems();
+  document.getElementById('filterDropMenu').classList.remove('open');
+  document.getElementById('filterDropBtn').classList.remove('open');
+}
+function updateFilterUI() {
+  const btn = document.getElementById('filterDropBtn');
+  const lbl = document.getElementById('filterDropLabel');
+  const NAMES = { scheduled:'Scheduled', ready:'Ready', writing:'NeedText', waiting:'Waiting', missed:'Missed', starred:'Starred' };
+  if (activeFilters.size === 0) {
+    lbl.textContent = 'Filter';
+    btn.classList.remove('active');
+  } else if (activeFilters.size === 1) {
+    lbl.textContent = NAMES[[...activeFilters][0]] || [...activeFilters][0];
+    btn.classList.add('active');
+  } else {
+    lbl.textContent = `${activeFilters.size} filters`;
+    btn.classList.add('active');
+  }
+}
+function resetFilters() {
+  activeFilters.clear(); filterNoDate = false;
+  const nb = document.getElementById('noDateBtn');
+  if (nb) nb.classList.remove('active');
+  const lbl = document.getElementById('filterDropLabel');
+  if (lbl) lbl.textContent = 'Filter';
+  const btn = document.getElementById('filterDropBtn');
+  if (btn) btn.classList.remove('active');
 }
 
 // ══ SORT ══
@@ -1436,13 +1528,14 @@ function sortItems(arr) {
       return ai - bi;
     });
   }
-  if (currentSort === 'date-asc') return [...arr].sort((a, b) => {
-    const ad = (a.month||99)*100+(a.day||99), bd = (b.month||99)*100+(b.day||99);
-    return ad - bd;
-  });
+  const dval = i => (i.month == null || i.day == null) ? Infinity : i.month * 100 + i.day;
+  if (currentSort === 'date-asc') return [...arr].sort((a, b) => dval(a) - dval(b));
   if (currentSort === 'date-desc') return [...arr].sort((a, b) => {
-    const ad = (a.month||0)*100+(a.day||0), bd = (b.month||0)*100+(b.day||0);
-    return bd - ad;
+    const av = dval(a), bv = dval(b);
+    if (av === Infinity && bv === Infinity) return 0;
+    if (av === Infinity) return 1;   // no-date last
+    if (bv === Infinity) return -1;  // no-date last
+    return bv - av;
   });
   if (currentSort === 'status') {
     const o = ['ready','writing','waiting','uploaded','postponed','missed'];
@@ -1946,6 +2039,15 @@ document.addEventListener('click',e=>{
 function updateAll(){ updateStats(); renderItems(); renderCalendar(); }
 document.getElementById('filterBar').style.display='flex';
 window.addEventListener('resize', () => { if (currentUser) renderCalendar(); });
+document.addEventListener('click', () => {
+  ['sortDropMenu','filterDropMenu','rangeDropMenu','ctxMenu','quickDrop'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+  });
+  document.getElementById('sortDropBtn')?.classList.remove('open');
+  document.getElementById('filterDropBtn')?.classList.remove('open');
+  document.getElementById('rangeDropBtn')?.classList.remove('open');
+});
 </script>
 </body>
 </html>
