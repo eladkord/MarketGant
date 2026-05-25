@@ -985,7 +985,7 @@ const firebaseConfig = {
   messagingSenderId: "1010935362910",
   appId: "1:1010935362910:web:0f8009cc7b6e5853f30bcf"
 };
-let db = null, unsubItems = null, unsubHistory = null, seeded = false;
+let db = null, unsubItems = null, unsubHistory = null, unsubSettings = null, seeded = false;
 try {
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
@@ -1115,8 +1115,9 @@ function completeLogin(user) {
 }
 
 function doLogout() {
-  if (unsubItems)   { unsubItems();   unsubItems   = null; }
-  if (unsubHistory) { unsubHistory(); unsubHistory = null; }
+  if (unsubItems)    { unsubItems();    unsubItems    = null; }
+  if (unsubHistory)  { unsubHistory();  unsubHistory  = null; }
+  if (unsubSettings) { unsubSettings(); unsubSettings = null; }
   seeded = false; currentUser = null; isAdmin = false;
   ITEMS = []; HISTORY = [];
   localStorage.removeItem('mg_session');
@@ -1138,6 +1139,25 @@ function startListeners() {
     if (_checkPublishedOnLoad) { _checkPublishedOnLoad = false; setTimeout(() => openPublishedPopup(), 600); }
     return;
   }
+  // Keep USERS + customOrder in real-time sync — fixes auto-restore session seeing stale hardcoded USERS
+  unsubSettings = db.collection('config').doc('settings').onSnapshot(snap => {
+    if (!snap.exists) return;
+    const d = snap.data();
+    if (d.users) {
+      USERS = d.users;
+    } else if (d.allowedUsers) {
+      const sharedPass = d.sharedPass || 'fc2026';
+      USERS = d.allowedUsers.map(email => ({
+        name: email.split('@')[0], email: email.toLowerCase(),
+        pass: email.toLowerCase() === ADMIN_EMAIL ? sharedPass : null
+      }));
+      db.collection('config').doc('settings').set({ users: USERS }, { merge: true });
+    }
+    if (d.customOrder) customOrder = d.customOrder;
+    // If settings panel is open on users tab, refresh it
+    const panel = document.getElementById('settingsPanel');
+    if (panel?.classList.contains('open') && currentSettingsTab === 'users') renderSettingsTab('users');
+  });
   unsubItems = db.collection('items').onSnapshot(snap => {
     if (snap.empty && !seeded) {
       seeded = true;
