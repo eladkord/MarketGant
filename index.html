@@ -326,7 +326,7 @@
     .s-ready     { background: #10b98118; color: #10b981; }
     .s-writing   { background: #f59e0b18; color: #f59e0b; }
     .s-waiting   { background: #f9731618; color: #f97316; }
-    .s-uploaded  { background: #8b5cf618; color: #8b5cf6; }
+    .s-published { background: #10b98122; color: #10b981; }
     .s-postponed { background: #6b728018; color: #9ca3af; }
     .s-missed    { background: #ef444418; color: #ef4444; }
 
@@ -408,6 +408,7 @@
     }
     .cal-cell.empty      { background: transparent; border-color: transparent; pointer-events: none; }
     .cal-cell.today      { border-color: var(--red); background: #ef444408; }
+    .cal-cell.past-unpub { border-color: #ef444440; background: #ef444408; }
     .cal-cell.drop-target { border-color: var(--accent); background: var(--accent-dim); border-style: dashed; }
     .cal-cell.starred-day { border-top: 2px solid var(--gold); }
     .cal-cell:not(.empty):hover { border-color: var(--border-light); }
@@ -569,7 +570,7 @@
     .badge-opt.sel-ready     { background: #10b98118; border-color: #10b981; color: #10b981; }
     .badge-opt.sel-writing   { background: #f59e0b18; border-color: #f59e0b; color: #f59e0b; }
     .badge-opt.sel-waiting   { background: #f9731618; border-color: #f97316; color: #f97316; }
-    .badge-opt.sel-uploaded  { background: #8b5cf618; border-color: #8b5cf6; color: #8b5cf6; }
+    .badge-opt.sel-published { background: #10b98118; border-color: #10b981; color: #10b981; }
     .badge-opt.sel-postponed { background: #6b728018; border-color: #9ca3af; color: #9ca3af; }
     .badge-opt.sel-missed    { background: #ef444418; border-color: #ef4444; color: #ef4444; }
     .priority-row { display: flex; gap: 7px; }
@@ -654,6 +655,34 @@
       border-color: var(--accent); border-style: dashed;
       background: var(--accent-dim); transform: translateY(-1px);
     }
+
+    /* ══ TODAY BAR ══ */
+    .today-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card); border: 1px solid var(--border-light); border-radius: 11px;
+      padding: 7px 14px; margin-bottom: 8px; flex-shrink: 0;
+    }
+    .today-bar-label { font-size: 13px; font-weight: 700; color: var(--red); white-space: nowrap; }
+    .today-bar-chips { display: flex; gap: 6px; flex: 1; align-items: center; overflow: hidden; min-width: 0; }
+    .today-bar-chip {
+      display: flex; align-items: center; gap: 3px; border-radius: 5px;
+      padding: 3px 7px; font-size: 12px; font-weight: 600; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; max-width: 160px; cursor: pointer;
+    }
+    .today-bar-chip:hover { opacity: 0.8; }
+    .today-bar-more {
+      font-size: 12px; color: var(--text-dim); font-weight: 600; cursor: pointer;
+      padding: 3px 7px; border-radius: 5px; border: 1px solid var(--border); flex-shrink: 0;
+    }
+    .today-bar-more:hover { border-color: var(--accent); color: var(--accent); }
+    .today-bar-empty { font-size: 12px; color: var(--text-faint); }
+    .pub-check-btn {
+      padding: 4px 12px; border-radius: 7px; font-size: 13px; font-weight: 700;
+      cursor: pointer; border: 1px solid var(--border); background: transparent;
+      color: var(--text-dim); font-family: inherit; transition: all 0.15s; flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .pub-check-btn:hover { border-color: var(--green); color: var(--green); background: #10b98110; }
 
     /* Today button in calendar header */
     .today-nav-btn {
@@ -746,19 +775,17 @@
       <button class="sec-tab" data-sec="backlog" onclick="switchSection('backlog',this)"
               ondragover="onSecTabDragOver(event,'backlog')" ondragleave="onSecTabDragLeave(event)" ondrop="onSecTabDrop(event,'backlog')">Backlog <span class="cnt" id="cnt-backlog">0</span></button>
       <button class="sec-tab" data-sec="archive" onclick="switchSection('archive',this)"
-              ondragover="onSecTabDragOver(event,'archive')" ondragleave="onSecTabDragLeave(event)" ondrop="onSecTabDrop(event,'archive')">Archive <span class="cnt" id="cnt-archive">0</span></button>
-      <button class="sec-tab" data-sec="trash"   onclick="switchSection('trash',this)"
-              ondragover="onSecTabDragOver(event,'trash')"   ondragleave="onSecTabDragLeave(event)" ondrop="onSecTabDrop(event,'trash')">🗑 <span class="cnt" id="cnt-trash">0</span></button>
+              ondragover="onSecTabDragOver(event,'archive')" ondragleave="onSecTabDragLeave(event)" ondrop="onSecTabDrop(event,'archive')">✅ <span class="cnt" id="cnt-archive">0</span></button>
       <button class="add-btn" onclick="addInlineItem()">+</button>
     </div>
     <div class="filter-bar" id="filterBar">
       <button class="sort-drop-btn" id="sortDropBtn" onclick="toggleSortDrop(event)">Sort: <span class="s-label" id="sortDropLabel">Custom</span> <span class="chevron">▼</span></button>
-      <button class="filter-drop-btn" id="filterDropBtn" onclick="toggleFilterDrop(event)"><span id="filterDropLabel">Filter</span> <span class="chevron">▼</span></button>
+      <button class="filter-drop-btn" id="filterDropBtn" onclick="toggleFilterDrop(event)"><span id="filterDropLabel">ALL</span> <span class="chevron">▼</span></button>
       <button class="filter-pill" id="noDateBtn" onclick="toggleNoDate()">No Date</button>
     </div>
     <!-- Trash header (when viewing trash) -->
     <div class="trash-header" id="trashHeader">
-      <button class="back-btn" onclick="exitTrash()">← Archive</button>
+      <button class="back-btn" onclick="exitTrash()">← ✅</button>
       <span class="trash-title">🗑 Trash</span>
       <button class="empty-trash-btn" onclick="emptyTrash()">Empty Trash</button>
     </div>
@@ -809,6 +836,7 @@
       </div>
     </div>
     <div class="calendar-grid-wrapper" id="calWrapper">
+      <div id="todayBar"></div>
       <div class="day-headers">
         <div class="day-header">SUN</div><div class="day-header">MON</div>
         <div class="day-header">TUE</div><div class="day-header">WED</div>
@@ -838,7 +866,7 @@
 </div>
 
 <!-- ══ FILTER DROPDOWN ══ -->
-<div class="sort-drop-menu" id="filterDropMenu" style="min-width:190px">
+<div class="sort-drop-menu" id="filterDropMenu" style="min-width:190px" onclick="event.stopPropagation()">
   <label class="sort-drop-item filter-check-item" data-f="scheduled"><input type="checkbox" value="scheduled"> Scheduled</label>
   <label class="sort-drop-item filter-check-item" data-f="ready"><input type="checkbox" value="ready"> ✅ Ready</label>
   <label class="sort-drop-item filter-check-item" data-f="writing"><input type="checkbox" value="writing"> ✍️ NeedText</label>
@@ -889,7 +917,7 @@
           <button class="badge-opt" data-status="writing"   onclick="selectStatus('writing')">✍️ NeedText</button>
           <button class="badge-opt" data-status="waiting"   onclick="selectStatus('waiting')">⏳ Waiting</button>
           <button class="badge-opt" data-status="ready"     onclick="selectStatus('ready')">✅ Ready</button>
-          <button class="badge-opt" data-status="uploaded"  onclick="selectStatus('uploaded')">🚀 Uploaded</button>
+          <button class="badge-opt" data-status="published" onclick="selectStatus('published')">✅ Published</button>
           <button class="badge-opt" data-status="postponed" onclick="selectStatus('postponed')">⏸️ Postponed</button>
           <button class="badge-opt" data-status="missed"    onclick="selectStatus('missed')">❌ Missed</button>
         </div>
@@ -983,7 +1011,8 @@ let USERS = [
 let currentUser = null;
 let isAdmin     = false;
 let lightMode   = false;
-let _pendingFirstLoginUser = null; // holds user object during set-password flow
+let _pendingFirstLoginUser = null;
+let _checkPublishedOnLoad  = false;
 
 function togglePassView(inputId, btn) {
   const inp = document.getElementById(inputId);
@@ -1085,6 +1114,7 @@ function completeLogin(user) {
     document.getElementById('setPass1').value  = '';
     document.getElementById('setPass2').value  = '';
     _pendingFirstLoginUser = null;
+    _checkPublishedOnLoad = true;
     startListeners();
     logAction('Logged in', '', '🔑');
   }, 360);
@@ -1108,10 +1138,10 @@ function doLogout() {
 
 function startListeners() {
   if (!db) {
-    // Offline mode — use seed data locally
     ITEMS = SEED_ITEMS.map(i => ({...i}));
     try { const s = localStorage.getItem('mg_customOrder'); if(s) customOrder = JSON.parse(s); } catch(e) {}
     updateAll();
+    if (_checkPublishedOnLoad) { _checkPublishedOnLoad = false; setTimeout(() => openPublishedPopup(), 600); }
     return;
   }
   unsubItems = db.collection('items').onSnapshot(snap => {
@@ -1122,8 +1152,19 @@ function startListeners() {
       batch.commit();
       return;
     }
-    ITEMS = snap.docs.map(doc => ({ ...doc.data(), id: parseInt(doc.id) }));
-    if (currentUser) updateAll();
+    ITEMS = snap.docs.map(doc => {
+      const d = doc.data();
+      // Migrate legacy 'uploaded' status → 'published'
+      if (d.status === 'uploaded') { d.status = 'published'; db.collection('items').doc(doc.id).update({status:'published'}); }
+      return { ...d, id: parseInt(doc.id) };
+    });
+    if (currentUser) {
+      updateAll();
+      if (_checkPublishedOnLoad) {
+        _checkPublishedOnLoad = false;
+        setTimeout(() => openPublishedPopup(), 600);
+      }
+    }
   });
   unsubHistory = db.collection('history').orderBy('createdAt','desc').limit(100).onSnapshot(snap => {
     HISTORY = snap.docs.map(doc => doc.data());
@@ -1138,7 +1179,7 @@ const SEED_ITEMS = [
   { id:2,  title:'Story — Tickets Drop',           type:'story',   status:'ready',     priority:'high',   platform:'IG',      day:25, month:5, time:'12:00', caption:'', hashtags:'#tickets #event #fusionculture', notes:'', driveLink:'', section:'content', starred:false },
   { id:3,  title:'Post — Workshop Documentation',  type:'post',    status:'writing',   priority:'medium', platform:'FB',      day:null, month:null, time:'18:00', caption:'', hashtags:'', notes:'Need photos from Yoni', driveLink:'', section:'content', starred:false },
   { id:4,  title:'Post — Team Introduction',       type:'post',    status:'waiting',   priority:'low',    platform:'ALL',     day:null, month:null, time:'20:00', caption:'', hashtags:'#team #fc', notes:'Waiting on profile photos', driveLink:'', section:'content', starred:false },
-  { id:5,  title:'Reel — VibeCheck BTS',           type:'reel',    status:'uploaded',  priority:'medium', platform:'IG',      day:24, month:5, time:'18:00', caption:'Behind the scenes 🎬', hashtags:'#bts #fusionculture', notes:'', driveLink:'', section:'content', starred:false },
+  { id:5,  title:'Reel — VibeCheck BTS',           type:'reel',    status:'published', priority:'medium', platform:'Social',  day:24, month:5, time:'18:00', caption:'Behind the scenes 🎬', hashtags:'#bts #fusionculture', notes:'', driveLink:'', section:'archive', starred:false },
   { id:6,  title:'Post — Next Event Announcement', type:'post',    status:'missed',    priority:'high',   platform:'MAIL',    day:20, month:5, time:'17:00', caption:'', hashtags:'', notes:'', driveLink:'', section:'content', starred:false },
   { id:7,  title:'Story — Audience Poll',          type:'story',   status:'writing',   priority:'low',    platform:'IG',      day:null, month:null, time:'21:00', caption:'', hashtags:'', notes:'', driveLink:'', section:'content', starred:false },
   { id:8,  title:'Post — Sadot Launch',            type:'post',    status:'ready',     priority:'high',   platform:'FBGRP',   day:28, month:5, time:'10:00', caption:'Galilee, music, and love — Sadot is coming 🌾', hashtags:'#sadot #romfarm', notes:'Cross-post with Sadot page', driveLink:'', section:'content', starred:true  },
@@ -1146,8 +1187,8 @@ const SEED_ITEMS = [
   { id:10, title:'Story — Q&A with Audience',      type:'story',   status:'ready',     priority:'medium', platform:'WA',      day:30, month:5, time:'20:00', caption:'', hashtags:'#qa #community', notes:'', driveLink:'', section:'content', starred:false },
   { id:11, title:'General — Update Bio',           type:'general', status:'waiting',   priority:'low',    platform:'General', day:null, month:null, time:'12:00', caption:'', hashtags:'', notes:'', driveLink:'', section:'content', starred:false },
   { id:12, title:'Story — New FC Product',         type:'story',   status:'postponed', priority:'low',    platform:'Vibez',   day:null, month:null, time:'18:00', caption:'', hashtags:'', notes:'Hold until confirmed', driveLink:'', section:'backlog', starred:false },
-  { id:13, title:'Post — Desert Base Recap (old)', type:'post',    status:'uploaded',  priority:'medium', platform:'IG',      day:10, month:5, time:'18:00', caption:'What a night.', hashtags:'#recap', notes:'', driveLink:'', section:'archive', starred:false },
-  { id:14, title:'Reel — Event Teaser May 1st',    type:'reel',    status:'uploaded',  priority:'high',   platform:'IG',      day:1,  month:5, time:'12:00', caption:'Something is coming...', hashtags:'#teaser', notes:'', driveLink:'', section:'archive', starred:false },
+  { id:13, title:'Post — Desert Base Recap (old)', type:'post',    status:'published', priority:'medium', platform:'Social',  day:10, month:5, time:'18:00', caption:'What a night.', hashtags:'#recap', notes:'', driveLink:'', section:'archive', starred:false },
+  { id:14, title:'Reel — Event Teaser May 1st',    type:'reel',    status:'published', priority:'high',   platform:'Social',  day:1,  month:5, time:'12:00', caption:'Something is coming...', hashtags:'#teaser', notes:'', driveLink:'', section:'archive', starred:false },
 ];
 let ITEMS   = [];
 let HISTORY = [];
@@ -1176,10 +1217,10 @@ let currentSettingsTab = 'general';
 let currentSort     = 'custom';
 let customOrder     = [];
 
-const TODAY = new Date(2026, 4, 24);
+const _now = new Date(); const TODAY = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate());
 const TYPE_LABELS   = { post:'Post', reel:'Reel', story:'Story', general:'General' };
-const STATUS_LABELS = { ready:'Ready', writing:'NeedText', waiting:'Waiting', uploaded:'Uploaded', postponed:'Postponed', missed:'Missed' };
-const PLAT_ICONS    = { FB:'📘', IG:'📸', ALL:'📡', MAIL:'📧', WA:'💬', FBGRP:'👥', Vibez:'🎵', SMS:'📱', General:'📌' };
+const STATUS_LABELS = { ready:'Ready', writing:'NeedText', waiting:'Waiting', published:'Published ✅', postponed:'Postponed', missed:'Missed' };
+const PLAT_ICONS    = { Social:'📱', FB:'📘', IG:'📸', ALL:'📡', MAIL:'📧', WA:'💬', FBGRP:'👥', Vibez:'🎵', SMS:'📱', General:'📌' };
 const HISTORY_ICONS = { added:'➕', edited:'✏️', deleted:'🗑', moved:'📦', starred:'⭐', scheduled:'📅', archived:'🗂', login:'🔑', logout:'🔒', duplicate:'⎘' };
 
 function logAction(action, itemTitle, icon) {
@@ -1204,7 +1245,6 @@ function updateStats() {
     document.getElementById('cnt-'+s).textContent = ITEMS.filter(i => i.section === s).length
   );
   const trashN = ITEMS.filter(i => i.section === 'deleted').length;
-  document.getElementById('cnt-trash').textContent = trashN;
   const trashCountEl = document.getElementById('trashCount');
   if (trashCountEl) trashCountEl.textContent = trashN > 0 ? `(${trashN})` : '';
 }
@@ -1217,8 +1257,8 @@ function switchSection(sec, btn) {
   btn.classList.add('active');
   document.querySelectorAll('.filter-pill').forEach(p => { p.classList.remove('active'); if(p.textContent.trim()==='All') p.classList.add('active'); });
   document.getElementById('filterBar').style.display = sec === 'content' ? 'flex' : 'none';
-  document.getElementById('trashBtnArea').style.display = 'none';
-  document.getElementById('trashHeader').classList.toggle('visible', sec === 'trash');
+  document.getElementById('trashBtnArea').style.display = sec === 'archive' ? 'flex' : 'none';
+  document.getElementById('trashHeader').classList.toggle('visible', false);
   updateAll();
 }
 
@@ -1278,10 +1318,11 @@ function renderItems() {
   }
   items = sortItems(items);
   if (currentSection === 'archive') {
-    const pub   = items.filter(i => i.status === 'uploaded');
-    const past  = items.filter(i => i.status === 'missed');
-    const other = items.filter(i => i.status !== 'uploaded' && i.status !== 'missed');
-    list.innerHTML = renderGroup('Published', pub) + renderGroup('Past Due', past) + renderGroup('Other', other);
+    const pub   = items.filter(i => i.status === 'published');
+    const other = items.filter(i => i.status !== 'published');
+    list.innerHTML = (pub.length || other.length)
+      ? renderGroup('Published ✅', pub) + (other.length ? renderGroup('Other', other) : '')
+      : `<div class="empty-state">Nothing published yet</div>`;
     return;
   }
   list.innerHTML = items.length ? items.map(renderCard).join('') : `<div class="empty-state">No items here</div>`;
@@ -1366,7 +1407,7 @@ function showQuickDrop(event, id, field) {
   ];
   const statOpts = [
     {v:'writing',l:'✍️ NeedText'},{v:'waiting',l:'⏳ Waiting'},{v:'ready',l:'✅ Ready'},
-    {v:'uploaded',l:'🚀 Uploaded'},{v:'postponed',l:'⏸️ Postponed'},{v:'missed',l:'❌ Missed'},
+    {v:'published',l:'✅ Published'},{v:'postponed',l:'⏸️ Postponed'},{v:'missed',l:'❌ Missed'},
   ];
   const platOpts = [
     {v:'IG',l:'📸 IG'},{v:'FB',l:'📘 FB'},{v:'ALL',l:'📡 ALL'},
@@ -1381,7 +1422,18 @@ function showQuickDrop(event, id, field) {
 }
 function applyQuickDrop(id, field, value) {
   const item = ITEMS.find(i => i.id === id);
-  if (item) { item[field] = value; fsUpdate(id, {[field]: value}); logAction('Edited item', item.title, '✏️'); }
+  if (!item) return;
+  const update = {[field]: value};
+  item[field] = value;
+  // Auto-move to ✅ when marked published
+  if (field === 'status' && value === 'published' && item.section !== 'archive') {
+    item.section = 'archive';
+    update.section = 'archive';
+    logAction('Published → ✅', item.title, '✅');
+  } else {
+    logAction('Edited item', item.title, '✏️');
+  }
+  fsUpdate(id, update);
   document.getElementById('quickDrop').classList.remove('open');
   updateAll();
 }
@@ -1498,7 +1550,7 @@ function updateFilterUI() {
   const lbl = document.getElementById('filterDropLabel');
   const NAMES = { scheduled:'Scheduled', ready:'Ready', writing:'NeedText', waiting:'Waiting', missed:'Missed', starred:'Starred' };
   if (activeFilters.size === 0) {
-    lbl.textContent = 'Filter';
+    lbl.textContent = 'ALL';
     btn.classList.remove('active');
   } else if (activeFilters.size === 1) {
     lbl.textContent = NAMES[[...activeFilters][0]] || [...activeFilters][0];
@@ -1513,7 +1565,7 @@ function resetFilters() {
   const nb = document.getElementById('noDateBtn');
   if (nb) nb.classList.remove('active');
   const lbl = document.getElementById('filterDropLabel');
-  if (lbl) lbl.textContent = 'Filter';
+  if (lbl) lbl.textContent = 'ALL';
   const btn = document.getElementById('filterDropBtn');
   if (btn) btn.classList.remove('active');
 }
@@ -1538,7 +1590,7 @@ function sortItems(arr) {
     return bv - av;
   });
   if (currentSort === 'status') {
-    const o = ['ready','writing','waiting','uploaded','postponed','missed'];
+    const o = ['ready','writing','waiting','published','postponed','missed'];
     return [...arr].sort((a, b) => o.indexOf(a.status) - o.indexOf(b.status));
   }
   if (currentSort === 'priority') {
@@ -1756,9 +1808,107 @@ function applyCustomRange() {
   if(s) customViewStart=new Date(s); if(e) customViewEnd=new Date(e); renderCalendar();
 }
 function fmtDate(d) { return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0'); }
+function renderTodayBar() {
+  const bar = document.getElementById('todayBar');
+  if (!bar) return;
+  const todayItems = ITEMS.filter(i =>
+    (i.section==='content'||i.section==='archive') &&
+    i.day===TODAY.getDate() && i.month===(TODAY.getMonth()+1)
+  );
+  const chipHtml = (item) => {
+    const label = item.title.length > 22 ? item.title.slice(0,20)+'…' : item.title;
+    return `<span class="today-bar-chip chip-${item.type}" onclick="openModal(${item.id})">${label}</span>`;
+  };
+  let chipsHtml = '';
+  if (todayItems.length === 0) {
+    chipsHtml = '<span class="today-bar-empty">Nothing scheduled today</span>';
+  } else if (todayItems.length <= 2) {
+    chipsHtml = todayItems.map(chipHtml).join('');
+  } else {
+    chipsHtml = todayItems.slice(0,2).map(chipHtml).join('') +
+      `<span class="today-bar-more" onclick="openTodayAll()">+${todayItems.length-2} more</span>`;
+  }
+  bar.innerHTML = `<div class="today-bar">
+    <span class="today-bar-label">Today ${String(TODAY.getDate()).padStart(2,'0')}.${String(TODAY.getMonth()+1).padStart(2,'0')}</span>
+    <div class="today-bar-chips">${chipsHtml}</div>
+    <button class="pub-check-btn" onclick="openPublishedPopup()">Published? 📋</button>
+  </div>`;
+}
+function openTodayAll() {
+  const todayItems = ITEMS.filter(i =>
+    (i.section==='content'||i.section==='archive') &&
+    i.day===TODAY.getDate() && i.month===(TODAY.getMonth()+1)
+  );
+  const listHtml = todayItems.map(i =>
+    `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px;cursor:pointer" onclick="closeAllModals();openModal(${i.id})">
+      <span class="type-badge type-${i.type}" style="font-size:11px">${TYPE_LABELS[i.type]}</span>
+      <span style="flex:1;font-size:14px;font-weight:600">${i.title}</span>
+      <span class="status-badge s-${i.status}" style="font-size:11px">${STATUS_LABELS[i.status]||i.status}</span>
+    </div>`
+  ).join('');
+  showFloatingPopup(`<div style="font-size:16px;font-weight:800;margin-bottom:10px">📅 Today's Items</div>${listHtml}`);
+}
+function openPublishedPopup() {
+  // Find past items (before today) not yet published, in content section
+  const tm = TODAY.getTime();
+  const unpublished = ITEMS.filter(i => {
+    if (i.section !== 'content' && i.section !== 'backlog') return false;
+    if (i.status === 'published') return false;
+    if (!i.day || !i.month) return false;
+    const d = new Date(TODAY.getFullYear(), i.month-1, i.day);
+    return d.getTime() < tm;
+  });
+  if (!unpublished.length) { toast('No past unpublished items ✓'); return; }
+  const listHtml = unpublished.map(i =>
+    `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.title}</div>
+        <div style="font-size:12px;color:var(--text-dim)">${String(i.day).padStart(2,'0')}.${String(i.month).padStart(2,'0')} · ${i.platform}</div>
+      </div>
+      <button onclick="markPublished(${i.id})" style="padding:5px 12px;border-radius:8px;background:var(--green);color:white;border:none;font-weight:700;font-size:13px;cursor:pointer;flex-shrink:0">DONE ✅</button>
+    </div>`
+  ).join('');
+  showFloatingPopup(`
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">Are these ones Published?</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px">${unpublished.length} past item${unpublished.length>1?'s':''} not yet marked published</div>
+    <div style="display:flex;flex-direction:column;gap:8px">${listHtml}</div>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+      <button onclick="closeFloatingPopup()" style="padding:6px 14px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text-dim);font-size:13px;cursor:pointer;font-family:inherit">Skip for now</button>
+    </div>
+  `);
+}
+function markPublished(id) {
+  const item = ITEMS.find(i => i.id === id);
+  if (!item) return;
+  item.status = 'published'; item.section = 'archive';
+  fsUpdate(id, { status:'published', section:'archive' });
+  logAction('Published → ✅', item.title, '✅');
+  updateAll();
+  openPublishedPopup(); // refresh popup
+}
+function showFloatingPopup(html) {
+  let p = document.getElementById('floatingPopup');
+  if (!p) {
+    p = document.createElement('div'); p.id = 'floatingPopup';
+    p.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:300;display:flex;align-items:center;justify-content:flex-start;pointer-events:none';
+    document.body.appendChild(p);
+  }
+  p.innerHTML = `<div style="pointer-events:all;margin:80px 0 0 16px;background:var(--surface);border:1px solid var(--border-light);border-radius:16px;padding:20px;width:420px;max-height:70vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+    ${html}
+  </div>`;
+  p.style.pointerEvents = 'none';
+  p.querySelector('div').style.pointerEvents = 'all';
+}
+function closeFloatingPopup() {
+  const p = document.getElementById('floatingPopup');
+  if (p) p.innerHTML = '';
+}
+function closeAllModals() { closeFloatingPopup(); }
+
 function renderCalendar() {
   const grid=document.getElementById('calendarGrid'), wrapper=document.getElementById('calWrapper');
   const {start,weeks}=getViewWindow(), total=weeks*7;
+  renderTodayBar();
   const endD=new Date(start); endD.setDate(endD.getDate()+total-1);
   document.getElementById('rangeDateLabel').textContent=fmtDate(start)+' — '+fmtDate(endD);
   const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1780,8 +1930,10 @@ function renderCalendar() {
     const d=new Date(start); d.setDate(d.getDate()+i);
     const dN=d.getDate(), dM=d.getMonth()+1;
     const isToday=d.getTime()===TODAY.getTime();
+    const isPast=d.getTime()<TODAY.getTime();
     const dayItems=shown.filter(it=>it.day===dN&&it.month===dM);
     const hasStarred=dayItems.some(it=>it.starred);
+    const hasPastUnpub=isPast&&dayItems.some(it=>it.section==='content'&&it.status!=='published');
     const lbl=String(dN).padStart(2,'0')+(dM!==5?'.'+String(dM).padStart(2,'0'):'');
     const chips=dayItems.map(it=>`
       <div class="cal-item-chip chip-${it.type}" draggable="true"
@@ -1790,7 +1942,7 @@ function renderCalendar() {
            title="${it.title} ${String(dN).padStart(2,'0')}.${String(dM).padStart(2,'0')} ${it.time}">
         ${it.starred?'⭐':''}${it.title}
       </div>`).join('');
-    html+=`<div class="cal-cell${isToday?' today':''}${hasStarred?' starred-day':''}"
+    html+=`<div class="cal-cell${isToday?' today':''}${hasPastUnpub?' past-unpub':''}${hasStarred?' starred-day':''}"
           ondragover="event.preventDefault();this.classList.add('drop-target')"
           ondragleave="this.classList.remove('drop-target')"
           ondrop="onDropToCell(event,${dN},${dM})">
@@ -1977,7 +2129,16 @@ function saveItem(){
     ITEMS.push(newItem); fsSet(nid,newItem); logAction('Added item',title,'➕');
   } else {
     const item=ITEMS.find(i=>i.id===currentItemId);
-    if(item){ Object.assign(item,data); fsUpdate(currentItemId,data); logAction('Edited item',title,'✏️'); }
+    if(item){
+      // Auto-move to ✅ when published
+      if(data.status==='published' && item.section!=='archive'){
+        data.section='archive'; item.section='archive';
+        logAction('Published → ✅',title,'✅');
+      } else {
+        logAction('Edited item',title,'✏️');
+      }
+      Object.assign(item,data); fsUpdate(currentItemId,data);
+    }
   }
   closeModal(); updateAll(); toast('Saved ✓');
 }
