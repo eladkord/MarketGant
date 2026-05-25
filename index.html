@@ -775,7 +775,7 @@
       <button class="sec-tab" data-sec="backlog" onclick="switchSection('backlog',this)"
               ondragover="onSecTabDragOver(event,'backlog')" ondragleave="onSecTabDragLeave(event)" ondrop="onSecTabDrop(event,'backlog')">Backlog <span class="cnt" id="cnt-backlog">0</span></button>
       <button class="sec-tab" data-sec="archive" onclick="switchSection('archive',this)"
-              ondragover="onSecTabDragOver(event,'archive')" ondragleave="onSecTabDragLeave(event)" ondrop="onSecTabDrop(event,'archive')">✅ <span class="cnt" id="cnt-archive">0</span></button>
+              ondragover="onSecTabDragOver(event,'archive')" ondragleave="onSecTabDragLeave(event)" ondrop="onSecTabDrop(event,'archive')">✅</button>
       <button class="add-btn" onclick="addInlineItem()">+</button>
     </div>
     <div class="filter-bar" id="filterBar">
@@ -1241,7 +1241,7 @@ function updateStats() {
   document.getElementById('statStories').textContent = c.filter(i => i.type === 'story').length;
   document.getElementById('statMissed').textContent  = c.filter(i => i.status === 'missed').length;
   document.getElementById('statProg').textContent    = c.filter(i => i.status === 'writing' || i.status === 'waiting').length;
-  ['content','backlog','archive'].forEach(s =>
+  ['content','backlog'].forEach(s =>
     document.getElementById('cnt-'+s).textContent = ITEMS.filter(i => i.section === s).length
   );
   const trashN = ITEMS.filter(i => i.section === 'deleted').length;
