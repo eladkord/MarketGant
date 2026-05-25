@@ -657,13 +657,8 @@
     }
 
     /* ══ TODAY BAR ══ */
-    .today-bar {
-      display: flex; align-items: center; gap: 10px;
-      background: var(--card); border: 1px solid var(--border-light); border-radius: 11px;
-      padding: 7px 14px; margin-bottom: 8px; flex-shrink: 0;
-    }
     .today-bar-label { font-size: 13px; font-weight: 700; color: var(--red); white-space: nowrap; }
-    .today-bar-chips { display: flex; gap: 6px; flex: 1; align-items: center; overflow: hidden; min-width: 0; }
+    .today-bar-chips { display: flex; gap: 5px; align-items: center; }
     .today-bar-chip {
       display: flex; align-items: center; gap: 3px; border-radius: 5px;
       padding: 3px 7px; font-size: 12px; font-weight: 600; white-space: nowrap;
@@ -745,7 +740,6 @@
   <div class="divider-v"></div>
   <div class="stats-row">
     <div class="stat-chip c-blue">  <span class="stat-num" id="statTotal">0</span>  <span class="stat-label">Items</span></div>
-    <div class="stat-chip c-orange"><span class="stat-num" id="statStories">0</span><span class="stat-label">Stories</span></div>
     <div class="stat-chip c-red">   <span class="stat-num" id="statMissed">0</span> <span class="stat-label">Missed</span></div>
     <div class="stat-chip c-yellow"><span class="stat-num" id="statProg">0</span>   <span class="stat-label">In Progress</span></div>
   </div>
@@ -834,9 +828,9 @@
         <input type="date" class="field-input" id="customEnd" value="2026-05-30">
         <button class="cal-nav" onclick="applyCustomRange()">→</button>
       </div>
+      <div id="todayBarInline" style="display:flex;align-items:center;gap:7px;margin-left:auto;flex-shrink:0"></div>
     </div>
     <div class="calendar-grid-wrapper" id="calWrapper">
-      <div id="todayBar"></div>
       <div class="day-headers">
         <div class="day-header">SUN</div><div class="day-header">MON</div>
         <div class="day-header">TUE</div><div class="day-header">WED</div>
@@ -1238,7 +1232,6 @@ function fmtNow() {
 function updateStats() {
   const c = ITEMS.filter(i => i.section === 'content');
   document.getElementById('statTotal').textContent   = c.length;
-  document.getElementById('statStories').textContent = c.filter(i => i.type === 'story').length;
   document.getElementById('statMissed').textContent  = c.filter(i => i.status === 'missed').length;
   document.getElementById('statProg').textContent    = c.filter(i => i.status === 'writing' || i.status === 'waiting').length;
   ['content','backlog'].forEach(s =>
@@ -1808,31 +1801,40 @@ function applyCustomRange() {
   if(s) customViewStart=new Date(s); if(e) customViewEnd=new Date(e); renderCalendar();
 }
 function fmtDate(d) { return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0'); }
+function countUnpublished() {
+  const tm = TODAY.getTime();
+  return ITEMS.filter(i => {
+    if (i.section !== 'content' && i.section !== 'backlog') return false;
+    if (i.status === 'published') return false;
+    if (!i.day || !i.month) return false;
+    return new Date(TODAY.getFullYear(), i.month-1, i.day).getTime() < tm;
+  }).length;
+}
 function renderTodayBar() {
-  const bar = document.getElementById('todayBar');
+  const bar = document.getElementById('todayBarInline');
   if (!bar) return;
   const todayItems = ITEMS.filter(i =>
     (i.section==='content'||i.section==='archive') &&
     i.day===TODAY.getDate() && i.month===(TODAY.getMonth()+1)
   );
   const chipHtml = (item) => {
-    const label = item.title.length > 22 ? item.title.slice(0,20)+'…' : item.title;
+    const label = item.title.length > 18 ? item.title.slice(0,16)+'…' : item.title;
     return `<span class="today-bar-chip chip-${item.type}" onclick="openModal(${item.id})">${label}</span>`;
   };
-  let chipsHtml = '';
-  if (todayItems.length === 0) {
-    chipsHtml = '<span class="today-bar-empty">Nothing scheduled today</span>';
-  } else if (todayItems.length <= 2) {
-    chipsHtml = todayItems.map(chipHtml).join('');
-  } else {
-    chipsHtml = todayItems.slice(0,2).map(chipHtml).join('') +
-      `<span class="today-bar-more" onclick="openTodayAll()">+${todayItems.length-2} more</span>`;
-  }
-  bar.innerHTML = `<div class="today-bar">
-    <span class="today-bar-label">Today ${String(TODAY.getDate()).padStart(2,'0')}.${String(TODAY.getMonth()+1).padStart(2,'0')}</span>
-    <div class="today-bar-chips">${chipsHtml}</div>
-    <button class="pub-check-btn" onclick="openPublishedPopup()">Published? 📋</button>
-  </div>`;
+  let chips = '';
+  if (todayItems.length === 0) chips = '<span class="today-bar-empty">Nothing today</span>';
+  else if (todayItems.length <= 2) chips = todayItems.map(chipHtml).join('');
+  else chips = todayItems.slice(0,2).map(chipHtml).join('') +
+    `<span class="today-bar-more" onclick="openTodayAll()">+${todayItems.length-2}</span>`;
+
+  const n = countUnpublished();
+  const badge = n > 0
+    ? `<span style="background:var(--red);color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 3px;margin-left:4px">${n}</span>`
+    : '';
+  bar.innerHTML =
+    `<span class="today-bar-label">Today ${String(TODAY.getDate()).padStart(2,'0')}.${String(TODAY.getMonth()+1).padStart(2,'0')}</span>` +
+    `<div class="today-bar-chips">${chips}</div>` +
+    `<button class="pub-check-btn" onclick="openPublishedPopup()">Published?${badge}</button>`;
 }
 function openTodayAll() {
   const todayItems = ITEMS.filter(i =>
@@ -1849,42 +1851,53 @@ function openTodayAll() {
   showFloatingPopup(`<div style="font-size:16px;font-weight:800;margin-bottom:10px">📅 Today's Items</div>${listHtml}`);
 }
 function openPublishedPopup() {
-  // Find past items (before today) not yet published, in content section
   const tm = TODAY.getTime();
   const unpublished = ITEMS.filter(i => {
     if (i.section !== 'content' && i.section !== 'backlog') return false;
     if (i.status === 'published') return false;
     if (!i.day || !i.month) return false;
-    const d = new Date(TODAY.getFullYear(), i.month-1, i.day);
-    return d.getTime() < tm;
+    return new Date(TODAY.getFullYear(), i.month-1, i.day).getTime() < tm;
   });
-  if (!unpublished.length) { toast('No past unpublished items ✓'); return; }
+  if (!unpublished.length) { toast('All caught up ✓'); closeFloatingPopup(); return; }
+  const btnStyle = 'padding:5px 14px;border-radius:8px;background:var(--yellow);color:#1a1a2e;border:none;font-weight:700;font-size:13px;cursor:pointer;flex-shrink:0;transition:background 0.25s,color 0.25s;font-family:inherit';
   const listHtml = unpublished.map(i =>
-    `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px">
+    `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px" data-pub-id="${i.id}">
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.title}</div>
         <div style="font-size:12px;color:var(--text-dim)">${String(i.day).padStart(2,'0')}.${String(i.month).padStart(2,'0')} · ${i.platform}</div>
       </div>
-      <button onclick="markPublished(${i.id})" style="padding:5px 12px;border-radius:8px;background:var(--green);color:white;border:none;font-weight:700;font-size:13px;cursor:pointer;flex-shrink:0">DONE ✅</button>
+      <button style="${btnStyle}" onclick="markPublishedInPopup(${i.id},this)">Done?</button>
     </div>`
   ).join('');
   showFloatingPopup(`
     <div style="font-size:16px;font-weight:800;margin-bottom:4px">Are these ones Published?</div>
-    <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px">${unpublished.length} past item${unpublished.length>1?'s':''} not yet marked published</div>
-    <div style="display:flex;flex-direction:column;gap:8px">${listHtml}</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px">${unpublished.length} past item${unpublished.length>1?'s':''} not yet marked</div>
+    <div style="display:flex;flex-direction:column;gap:8px" id="pubPopupList">${listHtml}</div>
     <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+      <button onclick="snoozePublishedPopup()" style="padding:6px 14px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text-dim);font-size:13px;cursor:pointer;font-family:inherit">Snooze 10min ⏰</button>
       <button onclick="closeFloatingPopup()" style="padding:6px 14px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text-dim);font-size:13px;cursor:pointer;font-family:inherit">Skip for now</button>
     </div>
   `);
 }
-function markPublished(id) {
+function markPublishedInPopup(id, btn) {
+  btn.textContent = 'Done ✅';
+  btn.style.background = 'var(--green)';
+  btn.style.color = 'white';
+  btn.disabled = true;
   const item = ITEMS.find(i => i.id === id);
   if (!item) return;
   item.status = 'published'; item.section = 'archive';
   fsUpdate(id, { status:'published', section:'archive' });
   logAction('Published → ✅', item.title, '✅');
-  updateAll();
-  openPublishedPopup(); // refresh popup
+  renderTodayBar();
+  updateStats();
+  renderItems();
+  if (countUnpublished() === 0) setTimeout(() => { closeFloatingPopup(); updateAll(); }, 900);
+}
+function snoozePublishedPopup() {
+  closeFloatingPopup();
+  toast('Snoozed for 10 min ⏰');
+  setTimeout(() => { if (currentUser) openPublishedPopup(); }, 10 * 60 * 1000);
 }
 function showFloatingPopup(html) {
   let p = document.getElementById('floatingPopup');
