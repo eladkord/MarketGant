@@ -11,6 +11,13 @@
     html { height: 100%; overflow: hidden; }
 
     /* ══ THEME VARIABLES ══ */
+    /* accent colour themes — applied via data-theme on <html> */
+    [data-theme="blue"]   { --accent:#3b82f6; --accent-dim:#3b82f614; }
+    [data-theme="green"]  { --accent:#10b981; --accent-dim:#10b98114; }
+    [data-theme="orange"] { --accent:#f97316; --accent-dim:#f9731614; }
+    [data-theme="pink"]   { --accent:#ec4899; --accent-dim:#ec489914; }
+    [data-theme="cyan"]   { --accent:#06b6d4; --accent-dim:#06b6d414; }
+    [data-theme="red"]    { --accent:#ef4444; --accent-dim:#ef444414; }
     :root {
       --bg:           #09090f;
       --surface:      #111119;
@@ -419,6 +426,7 @@
       padding: 3px 5px; font-size: 11.5px; font-weight: 600; cursor: grab;
       overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: opacity 0.15s; flex-shrink: 0;
     }
+    .chip-time { font-size: 10px; opacity: 0.65; font-weight: 500; flex-shrink: 0; }
     .cal-item-chip:hover { opacity: 0.72; }
     .chip-post    { background: #3b82f622; color: #3b82f6; border-left: 3px solid #3b82f6; }
     .chip-reel    { background: #ec489922; color: #ec4899; border-left: 3px solid #ec4899; }
@@ -686,6 +694,29 @@
       color: var(--text-dim); font-family: inherit; transition: all 0.15s; letter-spacing: 0.4px;
     }
     .today-nav-btn:hover { border-color: var(--red); color: var(--red); background: #ef444410; }
+
+    /* ══ MOBILE ══ */
+    .mobile-view-toggle { display: none; }
+    @media (max-width: 767px) {
+      html, body { overflow: auto; height: auto; }
+      #app { height: auto; overflow: visible; flex-direction: column; }
+      .topbar { height: auto; padding: 10px 14px; flex-wrap: wrap; gap: 8px; }
+      .stats-row { order: 3; width: 100%; }
+      .main { flex-direction: column; overflow: visible; height: auto; }
+      .left-panel { width: 100%; border-right: none; border-bottom: 1px solid var(--border); height: auto; max-height: none; }
+      .items-list  { max-height: 55vh; }
+      .right-panel { width: 100%; height: auto; }
+      .calendar-grid-wrapper { height: auto; overflow: visible; }
+      .calendar-grid { flex: none; height: auto; grid-template-rows: unset !important; }
+      .cal-cell { min-height: 80px; }
+      .mobile-view-toggle { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: var(--card); border-bottom: 1px solid var(--border); }
+      .mob-tog-btn { padding: 4px 12px; border-radius: 7px; font-size: 13px; font-weight: 700; border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+      .mob-tog-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+      body.mob-cal-view .left-panel  { display: none; }
+      body.mob-cal-view .right-panel { display: flex; }
+      body:not(.mob-cal-view) .right-panel { display: none; }
+      #todayBarInline { display: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -758,6 +789,12 @@
   </div>
 </div>
 
+<!-- MOBILE TOGGLE -->
+<div class="mobile-view-toggle">
+  <button class="mob-tog-btn active" id="mobListBtn" onclick="setMobView('list')">📋 List</button>
+  <button class="mob-tog-btn" id="mobCalBtn"  onclick="setMobView('cal')">📅 Calendar</button>
+</div>
+
 <!-- MAIN -->
 <div class="main">
 
@@ -796,6 +833,7 @@
     </div>
     <div class="multi-bar" id="multiBar">
       <span class="multi-label"><span id="multiCount">0</span> selected</span>
+      <button class="multi-btn" onclick="selectAll()">Select All</button>
       <button class="multi-btn" onclick="bulkStar()">⭐ Star</button>
       <button class="multi-btn" onclick="bulkMove('backlog')">→ Backlog</button>
       <button class="multi-btn danger" onclick="bulkMove('deleted')">🗑 Delete</button>
@@ -1172,6 +1210,7 @@ function startListeners() {
       if (d.status === 'uploaded') { d.status = 'published'; db.collection('items').doc(doc.id).update({status:'published'}); }
       return { ...d, id: parseInt(doc.id) };
     });
+    autoMarkMissed();
     if (currentUser) {
       updateAll();
       if (_checkPublishedOnLoad) {
@@ -1220,8 +1259,9 @@ let ctxItemId       = null;
 let currentType     = 'post';
 let currentStatus   = 'writing';
 let currentPriority = 'medium';
-let multiSelectMode = false;
-let selectedIds     = new Set();
+let multiSelectMode  = false;
+let selectedIds      = new Set();
+let lastSelectedId   = null;
 let viewRange       = 'month';
 let viewOffset      = 0;
 let customViewStart = null;
@@ -1349,7 +1389,9 @@ function renderGroup(label, items) {
 function renderCard(item) {
   const sel     = selectedIds.has(item.id);
   const pDot    = item.priority ? `<span class="item-priority p-${item.priority}"></span>` : '';
-  const dateStr = item.day && item.month ? `${String(item.day).padStart(2,'0')}.${String(item.month).padStart(2,'0')}` : '';
+  const dateStr = item.day && item.month
+    ? `${String(item.day).padStart(2,'0')}.${String(item.month).padStart(2,'0')}${item.time ? ' · ' + item.time : ''}`
+    : '';
   const isTrash = item.section === 'deleted';
   return `
     <div class="item-card${item.starred?' starred':''}${sel?' selected':''}${multiSelectMode?' multi-select-mode':''}"
@@ -1452,15 +1494,49 @@ function applyQuickDrop(id, field, value) {
 }
 
 // ══ MULTI-SELECT ══
+function getVisibleItems() {
+  let items = ITEMS.filter(i => i.section === (showingTrash ? 'deleted' : currentSection));
+  if (currentSection === 'content' && !showingTrash) {
+    if (activeFilters.size > 0) items = items.filter(item => {
+      for (const f of activeFilters) {
+        if (f === 'scheduled' && item.day != null) return true;
+        if (f === 'starred' && item.starred) return true;
+        if (item.status === f) return true;
+      }
+      return false;
+    });
+    if (filterNoDate) items = items.filter(i => i.day == null);
+  }
+  return sortItems(items);
+}
 function toggleSelect(event, id) {
   event.stopPropagation();
-  if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+  multiSelectMode = true;
+  if (event.shiftKey && lastSelectedId !== null) {
+    const visible = getVisibleItems();
+    const fromIdx = visible.findIndex(i => i.id === lastSelectedId);
+    const toIdx   = visible.findIndex(i => i.id === id);
+    if (fromIdx >= 0 && toIdx >= 0) {
+      const [lo, hi] = [Math.min(fromIdx, toIdx), Math.max(fromIdx, toIdx)];
+      for (let x = lo; x <= hi; x++) selectedIds.add(visible[x].id);
+    }
+  } else {
+    if (selectedIds.has(id)) { selectedIds.delete(id); }
+    else { selectedIds.add(id); lastSelectedId = id; }
+  }
   document.getElementById('multiCount').textContent = selectedIds.size;
   document.getElementById('multiBar').classList.toggle('visible', selectedIds.size > 0);
   renderItems();
 }
+function selectAll() {
+  multiSelectMode = true;
+  getVisibleItems().forEach(i => selectedIds.add(i.id));
+  document.getElementById('multiCount').textContent = selectedIds.size;
+  document.getElementById('multiBar').classList.add('visible');
+  renderItems();
+}
 function exitMultiSelect() {
-  multiSelectMode = false; selectedIds.clear();
+  multiSelectMode = false; selectedIds.clear(); lastSelectedId = null;
   document.getElementById('multiBar').classList.remove('visible'); renderItems();
 }
 function bulkStar() {
@@ -1469,8 +1545,17 @@ function bulkStar() {
   batch.commit(); exitMultiSelect(); updateAll();
 }
 function bulkMove(target) {
+  if (!db) return;
   const batch = db.batch();
-  selectedIds.forEach(id => { const i=ITEMS.find(x=>x.id===id); if(i){ logAction(target==='deleted'?'Deleted item':'Moved to backlog',i.title,target==='deleted'?'🗑':'📦'); i.section=target; batch.update(db.collection('items').doc(id.toString()),{section:target}); }});
+  selectedIds.forEach(id => {
+    const i = ITEMS.find(x => x.id === id);
+    if (!i) return;
+    const upd = { section: target };
+    if (target === 'backlog' && (i.day || i.month)) { i.day = null; i.month = null; upd.day = null; upd.month = null; }
+    i.section = target;
+    logAction(target==='deleted'?'Deleted item':'Moved to backlog', i.title, target==='deleted'?'🗑':'📦');
+    batch.update(db.collection('items').doc(id.toString()), upd);
+  });
   batch.commit(); exitMultiSelect(); updateAll();
 }
 
@@ -1732,8 +1817,10 @@ function onSecTabDrop(event, sec) {
   const item = ITEMS.find(i => i.id === dragItemId);
   const targetSec = sec === 'trash' ? 'deleted' : sec;
   if (item && item.section !== targetSec) {
+    const upd = { section: targetSec };
+    if (targetSec === 'backlog' && (item.day || item.month)) { item.day = null; item.month = null; upd.day = null; upd.month = null; }
     item.section = targetSec;
-    fsUpdate(item.id, { section: targetSec });
+    fsUpdate(item.id, upd);
     logAction(targetSec === 'deleted' ? 'Deleted item' : `Moved to ${sec}`, item.title, targetSec === 'deleted' ? '🗑' : '📦');
     toast(`Moved to ${sec}`);
   }
@@ -1972,10 +2059,12 @@ function renderCalendar() {
       <div class="cal-item-chip chip-${it.type}" draggable="true"
            ondragstart="onChipDragStart(event,${it.id})"
            onclick="event.stopPropagation();openModal(${it.id})"
-           title="${it.title} ${String(dN).padStart(2,'0')}.${String(dM).padStart(2,'0')} ${it.time}">
-        ${it.starred?'⭐':''}${it.title}
+           onmouseenter="showChipHover(event,${it.id})"
+           onmouseleave="hideChipHover()">
+        ${it.time?`<span class="chip-time">${it.time}</span>`:''}${it.starred?'⭐':''}${it.title}
       </div>`).join('');
     html+=`<div class="cal-cell${isToday?' today':''}${hasPastUnpub?' past-unpub':''}${hasStarred?' starred-day':''}"
+          onclick="onCalCellClick(${dN},${dM})"
           ondragover="event.preventDefault();this.classList.add('drop-target')"
           ondragleave="this.classList.remove('drop-target')"
           ondrop="onDropToCell(event,${dN},${dM})">
@@ -1983,6 +2072,107 @@ function renderCalendar() {
   }
   grid.innerHTML=html;
 }
+// ══ CALENDAR INTERACTIONS ══
+function onCalCellClick(dN, dM) {
+  // if a drag just happened, skip
+  if (dragItemId !== null) return;
+  const dayItems = ITEMS.filter(i => (i.section==='content'||i.section==='archive') && i.day===dN && i.month===dM);
+  if (dayItems.length === 0) addInlineItemWithDate(dN, dM);
+  else openDayView(dN, dM);
+}
+function addInlineItemWithDate(dN, dM) {
+  const id = Date.now();
+  const newItem = { id, title:'Untitled', type:'post', status:'writing', priority:'medium',
+    platform:'IG', time:'18:00', caption:'', hashtags:'', notes:'', driveLink:'',
+    section:'content', starred:false, day:dN, month:dM };
+  ITEMS.unshift(newItem);
+  fsSet(id, newItem);
+  logAction('Added item', newItem.title, '➕');
+  if (currentSection !== 'content') {
+    const btn = [...document.querySelectorAll('.sec-tab')].find(b => b.dataset.sec==='content');
+    if (btn) switchSection('content', btn);
+  }
+  updateAll();
+  setTimeout(() => openModal(id), 80);
+}
+function openDayView(dN, dM) {
+  const dayItems = ITEMS.filter(i => (i.section==='content'||i.section==='archive') && i.day===dN && i.month===dM)
+    .sort((a,b) => (a.time||'00:00').localeCompare(b.time||'00:00'));
+  const dl = `${String(dN).padStart(2,'0')}.${String(dM).padStart(2,'0')}`;
+  const rows = dayItems.map(i => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px;cursor:pointer"
+         onclick="closeFloatingPopup();openModal(${i.id})">
+      <div style="font-size:13px;font-weight:700;color:var(--text-dim);width:42px;flex-shrink:0">${i.time||'—'}</div>
+      <span class="type-badge type-${i.type}" style="font-size:11px">${TYPE_LABELS[i.type]}</span>
+      <span style="flex:1;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.title}</span>
+      <span class="status-badge s-${i.status}" style="font-size:11px">${STATUS_LABELS[i.status]||i.status}</span>
+    </div>`).join('');
+  showFloatingPopup(`
+    <div style="font-size:16px;font-weight:800;margin-bottom:10px">📅 ${dl} · ${dayItems.length} event${dayItems.length>1?'s':''}</div>
+    <div style="display:flex;flex-direction:column;gap:7px">${rows}</div>
+    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+      <button onclick="closeFloatingPopup();addInlineItemWithDate(${dN},${dM})"
+        style="padding:5px 12px;border-radius:8px;background:var(--accent);color:white;border:none;font-weight:700;font-size:13px;cursor:pointer">+ Add</button>
+      <button onclick="closeFloatingPopup()"
+        style="padding:5px 12px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text-dim);font-size:13px;cursor:pointer;font-family:inherit">Close</button>
+    </div>`);
+}
+function showChipHover(event, id) {
+  hideChipHover();
+  const item = ITEMS.find(i => i.id === id);
+  if (!item) return;
+  const t = document.createElement('div');
+  t.id = 'calHoverTooltip';
+  t.style.cssText = 'position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border-light);border-radius:12px;padding:12px 16px;box-shadow:0 10px 40px rgba(0,0,0,0.5);pointer-events:none;min-width:220px;max-width:300px';
+  t.innerHTML = `
+    <div style="font-size:14px;font-weight:700;margin-bottom:5px">${item.title}</div>
+    <div style="font-size:12px;color:var(--text-dim);display:flex;flex-direction:column;gap:3px">
+      <span>${TYPE_LABELS[item.type]||item.type} · ${item.platform} · ${item.time||'—'}</span>
+      ${item.caption?`<span style="margin-top:3px;font-size:11px;opacity:0.8;white-space:pre-wrap;max-height:50px;overflow:hidden">${item.caption.slice(0,120)}</span>`:''}
+    </div>
+    <div style="margin-top:7px;display:flex;gap:6px;align-items:center">
+      <span class="status-badge s-${item.status}" style="font-size:11px">${STATUS_LABELS[item.status]||item.status}</span>
+      ${item.starred?'<span>⭐</span>':''}
+    </div>`;
+  document.body.appendChild(t);
+  const x = Math.min(event.clientX + 14, window.innerWidth - 320);
+  const y = Math.min(event.clientY - 10, window.innerHeight - 200);
+  t.style.left = x + 'px'; t.style.top = y + 'px';
+}
+function hideChipHover() {
+  const t = document.getElementById('calHoverTooltip');
+  if (t) t.remove();
+}
+
+// ══ PAST ITEMS AUTO-MISS ══
+function autoMarkMissed() {
+  const tm = TODAY.getTime();
+  ITEMS.forEach(item => {
+    if (item.section !== 'content') return;
+    if (['published','missed','postponed'].includes(item.status)) return;
+    if (!item.day || !item.month) return;
+    if (new Date(TODAY.getFullYear(), item.month-1, item.day).getTime() < tm) {
+      item.status = 'missed';
+      if (db) db.collection('items').doc(item.id.toString()).update({ status:'missed' });
+    }
+  });
+}
+
+// ══ THEME COLORS ══
+function setTheme(id) {
+  localStorage.setItem('mg_theme', id);
+  document.documentElement.setAttribute('data-theme', id === 'purple' ? '' : id);
+  const panel = document.getElementById('settingsPanel');
+  if (panel?.classList.contains('open') && currentSettingsTab === 'general') renderSettingsTab('general');
+}
+
+// ══ MOBILE VIEW TOGGLE ══
+function setMobView(v) {
+  document.body.classList.toggle('mob-cal-view', v === 'cal');
+  document.getElementById('mobListBtn').classList.toggle('active', v === 'list');
+  document.getElementById('mobCalBtn').classList.toggle('active', v === 'cal');
+}
+
 function onChipDragStart(event,id){
   event.stopPropagation(); dragItemId=id; dragSource='calendar';
   event.dataTransfer.effectAllowed='move';
@@ -2014,6 +2204,21 @@ function switchSettingsTab(tab, btn) {
 function renderSettingsTab(tab) {
   const body=document.getElementById('settingsBody');
   if(tab==='general') {
+    const curTheme = localStorage.getItem('mg_theme') || 'purple';
+    const themes = [
+      {id:'purple',c:'#7c5ff5',l:'Purple'},
+      {id:'blue',  c:'#3b82f6',l:'Blue'},
+      {id:'green', c:'#10b981',l:'Green'},
+      {id:'orange',c:'#f97316',l:'Orange'},
+      {id:'pink',  c:'#ec4899',l:'Pink'},
+      {id:'cyan',  c:'#06b6d4',l:'Cyan'},
+      {id:'red',   c:'#ef4444',l:'Red'},
+    ];
+    const dots = themes.map(t=>`
+      <button onclick="setTheme('${t.id}')" title="${t.l}"
+        style="width:30px;height:30px;border-radius:50%;background:${t.c};cursor:pointer;transition:all 0.15s;
+               border:3px solid ${curTheme===t.id?'var(--text)':'transparent'};
+               box-shadow:0 0 0 2px ${curTheme===t.id?t.c:'transparent'}"></button>`).join('');
     body.innerHTML=`
       <div class="setting-group">
         <div class="setting-group-title">Appearance</div>
@@ -2026,6 +2231,10 @@ function renderSettingsTab(tab) {
             <input type="checkbox" ${lightMode?'checked':''} onchange="toggleTheme(this.checked)">
             <div class="toggle-track"></div>
           </label>
+        </div>
+        <div class="setting-row" style="align-items:flex-start;flex-direction:column;gap:10px">
+          <div class="setting-row-label">Accent Color</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">${dots}</div>
         </div>
       </div>
       `;
@@ -2233,7 +2442,19 @@ document.addEventListener('click',e=>{
 function updateAll(){ updateStats(); renderItems(); renderCalendar(); }
 document.getElementById('filterBar').style.display='flex';
 window.addEventListener('resize', () => { if (currentUser) renderCalendar(); });
-document.addEventListener('click', () => {
+
+// ENTER = save in modal; ESC = close
+document.getElementById('itemModal')?.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); return; }
+  if (e.key === 'Enter' && !e.shiftKey && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); saveItem(); }
+});
+
+// Theme init from localStorage
+(function(){
+  const t = localStorage.getItem('mg_theme') || 'purple';
+  if (t !== 'purple') document.documentElement.setAttribute('data-theme', t);
+})();
+document.addEventListener('click', e => {
   ['sortDropMenu','filterDropMenu','rangeDropMenu','ctxMenu','quickDrop'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('open');
@@ -2241,6 +2462,14 @@ document.addEventListener('click', () => {
   document.getElementById('sortDropBtn')?.classList.remove('open');
   document.getElementById('filterDropBtn')?.classList.remove('open');
   document.getElementById('rangeDropBtn')?.classList.remove('open');
+  // Exit multi-select when clicking outside the list and multi-bar
+  if (multiSelectMode) {
+    const list = document.getElementById('itemsList');
+    const bar  = document.getElementById('multiBar');
+    if (list && bar && !list.contains(e.target) && !bar.contains(e.target)) exitMultiSelect();
+  }
+  // Hide cal hover tooltip
+  hideChipHover();
 });
 </script>
 </body>
