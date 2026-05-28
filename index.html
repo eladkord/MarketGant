@@ -695,28 +695,46 @@
     }
     .today-nav-btn:hover { border-color: var(--red); color: var(--red); background: #ef444410; }
 
-    /* ══ MOBILE ══ */
+    /* ══ MOBILE WEEK VIEW ══ */
+    #weekViewPanel { display: none; flex-direction: column; flex: 1; overflow: hidden; background: var(--bg); }
+    .wv-header { display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .wv-cols   { display: flex; flex: 1; overflow-y: auto; }
+    .wv-col    { flex: 1; border-right: 1px solid var(--border); display: flex; flex-direction: column; min-width: 0; }
+    .wv-col:last-child { border-right: none; }
+    .wv-col-head { text-align: center; padding: 5px 2px; font-size: 10px; font-weight: 700; color: var(--text-dim); border-bottom: 1px solid var(--border); flex-shrink: 0; line-height: 1.3; }
+    .wv-col-head.wv-today { color: var(--red); }
+    .wv-col-body { flex: 1; padding: 3px 2px; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+    .wv-chip { border-radius: 4px; padding: 2px 4px; font-size: 9.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; line-height: 1.4; }
+    .wv-chip:hover { opacity: 0.8; }
+    .wv-more { font-size: 9px; color: var(--text-dim); text-align: center; padding: 1px 0; cursor: pointer; }
+    .wv-full-btn { padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .wv-full-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .wv-nav-btn { padding: 2px 8px; border-radius: 6px; font-size: 16px; font-weight: 700; border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; font-family: inherit; line-height: 1.4; flex-shrink: 0; }
+    .wv-nav-btn:active { background: var(--card); }
+    .wv-date-label { flex: 1; font-size: 10px; font-weight: 700; color: var(--text-dim); text-align: center; }
+    .wv-col-head.wv-missed { color: var(--red); }
+    .wv-col.wv-today-col { background: #ef444408; }
+    .wv-empty-hint { font-size: 9px; color: var(--text-faint); text-align: center; padding-top: 6px; }
+    /* Mobile device layout (UA-detected, applied via JS) */
     .mobile-view-toggle { display: none; }
-    @media (max-width: 767px) {
-      html, body { overflow: auto; height: auto; }
-      #app { height: auto; overflow: visible; flex-direction: column; }
-      .topbar { height: auto; padding: 10px 14px; flex-wrap: wrap; gap: 8px; }
-      .stats-row { order: 3; width: 100%; }
-      .main { flex-direction: column; overflow: visible; height: auto; }
-      .left-panel { width: 100%; border-right: none; border-bottom: 1px solid var(--border); height: auto; max-height: none; }
-      .items-list  { max-height: 55vh; }
-      .right-panel { width: 100%; height: auto; }
-      .calendar-grid-wrapper { height: auto; overflow: visible; }
-      .calendar-grid { flex: none; height: auto; grid-template-rows: unset !important; }
-      .cal-cell { min-height: 80px; }
-      .mobile-view-toggle { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: var(--card); border-bottom: 1px solid var(--border); }
-      .mob-tog-btn { padding: 4px 12px; border-radius: 7px; font-size: 13px; font-weight: 700; border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; font-family: inherit; transition: all 0.15s; }
-      .mob-tog-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
-      body.mob-cal-view .left-panel  { display: none; }
-      body.mob-cal-view .right-panel { display: flex; }
-      body:not(.mob-cal-view) .right-panel { display: none; }
-      #todayBarInline { display: none !important; }
-    }
+    body.mobile-device { overflow: hidden; }
+    body.mobile-device #app { height: 100dvh; flex-direction: column; overflow: hidden; }
+    body.mobile-device .topbar { height: auto; padding: 8px 12px; flex-wrap: wrap; gap: 6px; }
+    body.mobile-device .stats-row { display: none; }
+    body.mobile-device .divider-v { display: none; }
+    body.mobile-device .main { flex-direction: row; flex: 1; overflow: hidden; }
+    body.mobile-device .left-panel { width: 50%; flex-shrink: 0; border-right: 1px solid var(--border); overflow: hidden; }
+    body.mobile-device .left-panel .items-list { height: calc(100% - 44px); }
+    body.mobile-device .right-panel { width: 50%; display: flex; overflow: hidden; }
+    body.mobile-device #weekViewPanel { display: flex; }
+    body.mobile-device .calendar-header { display: none; }
+    body.mobile-device #calWrapper { display: none; }
+    body.mobile-device #todayBarInline { display: none; }
+    /* Full calendar mode on mobile */
+    body.mobile-device.mob-fullcal #weekViewPanel { display: none; }
+    body.mobile-device.mob-fullcal .calendar-header { display: flex; }
+    body.mobile-device.mob-fullcal #calWrapper { display: flex; }
+    body.mobile-device.mob-fullcal .right-panel { flex-direction: column; }
   </style>
 </head>
 <body>
@@ -876,6 +894,17 @@
         <div class="day-header">SAT</div>
       </div>
       <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+
+    <!-- MOBILE WEEK VIEW PANEL -->
+    <div id="weekViewPanel">
+      <div class="wv-header">
+        <button class="wv-nav-btn" onclick="shiftWeekView(-1)">‹</button>
+        <button class="wv-nav-btn" onclick="shiftWeekView(1)">›</button>
+        <span class="wv-date-label" id="wvDateLabel"></span>
+        <button class="wv-full-btn" id="wvFullBtn" onclick="toggleFullCal()">📅 Month</button>
+      </div>
+      <div class="wv-cols" id="wvCols"></div>
     </div>
   </div>
 
@@ -1264,6 +1293,7 @@ let selectedIds      = new Set();
 let lastSelectedId   = null;
 let viewRange       = 'month';
 let viewOffset      = 0;
+let weekViewOffset  = 0; // mobile week panel offset (in weeks from current)
 let customViewStart = null;
 let customViewEnd   = null;
 let showingTrash    = false;
@@ -2438,8 +2468,91 @@ document.addEventListener('click',e=>{
   }
 })();
 
+// ══ MOBILE WEEK VIEW ══
+function shiftWeekView(dir) {
+  weekViewOffset += dir;
+  renderWeekView();
+}
+
+function toggleFullCal() {
+  const isFull = document.body.classList.toggle('mob-fullcal');
+  const btn = document.getElementById('wvFullBtn');
+  if (btn) { btn.textContent = isFull ? '📋 Week' : '📅 Month'; btn.classList.toggle('active', isFull); }
+  if (isFull) renderCalendar(); else renderWeekView();
+}
+
+function onWvColClick(dN, dM) {
+  const dayItems = ITEMS.filter(i => (i.section==='content'||i.section==='archive') && i.day===dN && i.month===dM);
+  if (dayItems.length === 0) addInlineItemWithDate(dN, dM);
+  else openDayView(dN, dM);
+}
+
+function renderWeekView() {
+  const cols = document.getElementById('wvCols');
+  const label = document.getElementById('wvDateLabel');
+  if (!cols || !document.body.classList.contains('mobile-device')) return;
+  // Don't render if full-cal mode is active
+  if (document.body.classList.contains('mob-fullcal')) return;
+
+  // Week start: Sunday of offset week
+  const base = new Date(TODAY);
+  base.setDate(base.getDate() - base.getDay() + weekViewOffset * 7);
+
+  const weekEnd = new Date(base); weekEnd.setDate(weekEnd.getDate() + 6);
+  const fmt = d => `${d.getDate()} ${d.toLocaleString('en',{month:'short'})}`;
+  if (label) label.textContent = `${fmt(base)} — ${fmt(weekEnd)}`;
+
+  const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let html = '';
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(base); d.setDate(d.getDate() + i);
+    const dN = d.getDate(), dM = d.getMonth() + 1;
+    const isToday = d.getTime() === TODAY.getTime();
+    const isPast  = d < TODAY;
+
+    const dayItems = ITEMS.filter(it => {
+      if (it.section === 'deleted') return false;
+      return it.day === dN && it.month === dM;
+    }).sort((a,b) => (a.time||'00:00').localeCompare(b.time||'00:00'));
+
+    const hasMissed = dayItems.some(it => it.status === 'missed') ||
+      (isPast && dayItems.some(it => it.section==='content' && !['published','missed','postponed'].includes(it.status)));
+
+    const shown = dayItems.slice(0, 2);
+    const extra = dayItems.length - shown.length;
+
+    const chips = shown.map(it => {
+      const clr = it.status==='published' ? 'var(--green)'
+                : it.status==='missed'    ? 'var(--red)'
+                : it.status==='ready'     ? 'var(--accent)'
+                : it.status==='waiting'   ? 'var(--yellow)'
+                : 'var(--text-dim)';
+      return `<div class="wv-chip" style="background:${clr}20;color:${clr};border:1px solid ${clr}40"
+               onclick="event.stopPropagation();openModal(${it.id})">
+               ${it.time?`<span style="font-size:8px;opacity:.75;margin-right:1px">${it.time}</span>`:''}${it.title}
+             </div>`;
+    }).join('');
+
+    const extraBadge = extra > 0 ? `<div class="wv-chip" style="background:var(--card);color:var(--text-dim);text-align:center;font-size:8.5px">+${extra}</div>` : '';
+    const emptyHint  = dayItems.length === 0 ? `<div class="wv-empty-hint">+ add</div>` : '';
+
+    const headCls = isToday ? 'wv-today' : (hasMissed ? 'wv-missed' : '');
+    const colCls  = isToday ? 'wv-today-col' : '';
+
+    html += `<div class="wv-col ${colCls}" onclick="onWvColClick(${dN},${dM})">
+      <div class="wv-col-head ${headCls}">
+        <div>${DAY_NAMES[i]}</div>
+        <div style="font-size:14px;font-weight:800;color:${isToday?'var(--red)':'inherit'}">${dN}</div>
+      </div>
+      <div class="wv-col-body">${chips}${extraBadge}${emptyHint}</div>
+    </div>`;
+  }
+  cols.innerHTML = html;
+}
+
 // ══ INIT ══
-function updateAll(){ updateStats(); renderItems(); renderCalendar(); }
+function updateAll(){ updateStats(); renderItems(); renderCalendar(); renderWeekView(); }
 document.getElementById('filterBar').style.display='flex';
 window.addEventListener('resize', () => { if (currentUser) renderCalendar(); });
 
@@ -2462,15 +2575,26 @@ document.addEventListener('click', e => {
   document.getElementById('sortDropBtn')?.classList.remove('open');
   document.getElementById('filterDropBtn')?.classList.remove('open');
   document.getElementById('rangeDropBtn')?.classList.remove('open');
-  // Exit multi-select when clicking outside the list and multi-bar
+  // Exit multi-select when clicking outside the list/bar — but NOT inside any popup/menu
   if (multiSelectMode) {
-    const list = document.getElementById('itemsList');
-    const bar  = document.getElementById('multiBar');
-    if (list && bar && !list.contains(e.target) && !bar.contains(e.target)) exitMultiSelect();
+    const inOverlay = ['ctxMenu','quickDrop','sortDropMenu','filterDropMenu','rangeDropMenu','floatingPopup','itemModal']
+      .some(id => { const el = document.getElementById(id); return el && el.contains(e.target); });
+    if (!inOverlay) {
+      const list = document.getElementById('itemsList');
+      const bar  = document.getElementById('multiBar');
+      if (list && bar && !list.contains(e.target) && !bar.contains(e.target)) exitMultiSelect();
+    }
   }
   // Hide cal hover tooltip
   hideChipHover();
 });
+
+// ══ MOBILE UA DETECTION ══
+(function() {
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) {
+    document.body.classList.add('mobile-device');
+  }
+})();
 </script>
 </body>
 </html>
