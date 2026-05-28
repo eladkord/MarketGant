@@ -12,12 +12,13 @@
 
     /* ══ THEME VARIABLES ══ */
     /* accent colour themes — applied via data-theme on <html> */
-    [data-theme="blue"]   { --accent:#3b82f6; --accent-dim:#3b82f614; }
-    [data-theme="green"]  { --accent:#10b981; --accent-dim:#10b98114; }
-    [data-theme="orange"] { --accent:#f97316; --accent-dim:#f9731614; }
-    [data-theme="pink"]   { --accent:#ec4899; --accent-dim:#ec489914; }
-    [data-theme="cyan"]   { --accent:#06b6d4; --accent-dim:#06b6d414; }
-    [data-theme="red"]    { --accent:#ef4444; --accent-dim:#ef444414; }
+    /* specificity: html[attr] (0-1-1) beats :root (0-1-0) so these always win */
+    html[data-theme="blue"]   { --accent:#3b82f6; --accent-dim:#3b82f614; }
+    html[data-theme="green"]  { --accent:#10b981; --accent-dim:#10b98114; }
+    html[data-theme="orange"] { --accent:#f97316; --accent-dim:#f9731614; }
+    html[data-theme="pink"]   { --accent:#ec4899; --accent-dim:#ec489914; }
+    html[data-theme="cyan"]   { --accent:#06b6d4; --accent-dim:#06b6d414; }
+    html[data-theme="red"]    { --accent:#ef4444; --accent-dim:#ef444414; }
     :root {
       --bg:           #09090f;
       --surface:      #111119;
@@ -600,6 +601,34 @@
     .btn-copy:hover      { border-color: var(--green); color: var(--green); }
     .btn-danger    { background: transparent; border: 1px solid #ef444428; color: var(--red); margin-right: auto; }
     .btn-danger:hover    { background: #ef444415; border-color: var(--red); }
+    /* ══ RECURRING ══ */
+    .repeat-row { display: flex; align-items: center; gap: 10px; padding: 11px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 11px; }
+    .repeat-label { font-size: 14px; font-weight: 700; color: var(--text-dim); flex: 1; }
+    .repeat-toggle { position: relative; display: inline-block; width: 38px; height: 22px; flex-shrink: 0; }
+    .repeat-toggle input { opacity: 0; width: 0; height: 0; }
+    .repeat-slider { position: absolute; cursor: pointer; inset: 0; background: var(--border-light); border-radius: 22px; transition: 0.2s; }
+    .repeat-slider:before { content:''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+    .repeat-toggle input:checked + .repeat-slider { background: var(--accent); }
+    .repeat-toggle input:checked + .repeat-slider:before { transform: translateX(16px); }
+    .repeat-options { display: flex; gap: 9px; margin-top: 8px; }
+    .repeat-select { background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 7px 11px; color: var(--text); font-family: inherit; font-size: 14px; outline: none; cursor: pointer; flex: 1; }
+    .repeat-select:focus { border-color: var(--accent); }
+    .series-bar { display: flex; align-items: center; gap: 9px; padding: 9px 14px; background: var(--accent-dim); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 11px; font-size: 13px; font-weight: 600; color: var(--accent); }
+    .series-bar-lbl { flex: 1; }
+    .series-link { background: none; border: none; color: var(--accent); font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; padding: 3px 8px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+    .series-link:hover { background: var(--accent); color: white; }
+    /* Series scope dialog */
+    #seriesDialog { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.55); }
+    #seriesDialog.open { display: flex; }
+    .series-dlg { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 28px 28px 22px; width: 360px; box-shadow: 0 24px 64px var(--shadow); display: flex; flex-direction: column; gap: 14px; }
+    .series-dlg-title { font-size: 17px; font-weight: 800; }
+    .series-dlg-sub { font-size: 13px; color: var(--text-dim); margin-top: -6px; }
+    .series-dlg-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+    .series-scope-btn { padding: 11px 16px; border-radius: 11px; font-size: 15px; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--text); font-family: inherit; text-align: left; transition: all 0.15s; }
+    .series-scope-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .series-scope-btn.danger:hover { border-color: var(--red); color: var(--red); background: #ef444410; }
+    .series-dlg-cancel { background: none; border: none; color: var(--text-dim); font-family: inherit; font-size: 14px; cursor: pointer; padding: 6px; align-self: center; }
+    .series-dlg-cancel:hover { color: var(--text); }
 
     /* Toast */
     .toast {
@@ -1028,13 +1057,58 @@
         <input class="field-input" id="modalDriveLink" placeholder="https://drive.google.com/file/d/..." oninput="updateDrivePreview(this.value)">
         <div class="drive-preview" id="drivePreview"><span>📁 Paste a Drive link to preview</span></div>
       </div>
+
+      <!-- REPEAT SECTION — shown only for new items -->
+      <div id="repeatSection" style="display:none">
+        <div class="repeat-row">
+          <span class="repeat-label">🔁 Repeat</span>
+          <label class="repeat-toggle">
+            <input type="checkbox" id="repeatToggle" onchange="onRepeatToggle(this.checked)">
+            <span class="repeat-slider"></span>
+          </label>
+        </div>
+        <div class="repeat-options" id="repeatOptions" style="display:none">
+          <select class="repeat-select" id="repeatFreq">
+            <option value="7">Every week</option>
+            <option value="14">Every 2 weeks</option>
+          </select>
+          <select class="repeat-select" id="repeatCount">
+            <option value="3">+ 3 more</option>
+            <option value="5">+ 5 more</option>
+            <option value="7" selected>+ 7 more</option>
+            <option value="11">+ 11 more</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- SERIES BAR — shown for existing items that belong to a series -->
+      <div class="series-bar" id="seriesBar" style="display:none">
+        <span class="series-bar-lbl">🔁 Recurring series</span>
+        <button class="series-link" onclick="openSeriesDialog('edit')">Edit scope…</button>
+        <button class="series-link" style="border-color:color-mix(in srgb,var(--red) 40%,transparent);color:var(--red)" onclick="openSeriesDialog('delete')">Delete scope…</button>
+      </div>
     </div>
+
     <div class="modal-footer">
       <button class="btn btn-danger"    onclick="deleteItemModal()">🗑 Delete</button>
       <button class="btn btn-copy"      onclick="copyCaption()">📋 Copy</button>
       <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary"   onclick="saveItem()">Save</button>
     </div>
+  </div>
+</div>
+
+<!-- SERIES SCOPE DIALOG -->
+<div id="seriesDialog">
+  <div class="series-dlg">
+    <div class="series-dlg-title" id="seriesDlgTitle">Edit recurring event</div>
+    <div class="series-dlg-sub" id="seriesDlgSub">Choose which occurrences to affect</div>
+    <div class="series-dlg-btns">
+      <button class="series-scope-btn" onclick="applySeriesScope('one')">Just this one</button>
+      <button class="series-scope-btn" onclick="applySeriesScope('future')">This &amp; future occurrences</button>
+      <button class="series-scope-btn" id="seriesScopeAll" onclick="applySeriesScope('all')">All occurrences in series</button>
+    </div>
+    <button class="series-dlg-cancel" onclick="closeSeriesDialog()">Cancel</button>
   </div>
 </div>
 
@@ -1291,6 +1365,9 @@ let currentPriority = 'medium';
 let multiSelectMode  = false;
 let selectedIds      = new Set();
 let lastSelectedId   = null;
+let _seriesAction    = null;  // 'edit' | 'delete' — active scope dialog action
+let _pendingSaveData = null;  // buffered save payload while scope dialog is open
+let _modalIsNew      = false; // true when modal was opened for a brand-new item
 let viewRange       = 'month';
 let viewOffset      = 0;
 let weekViewOffset  = 0; // mobile week panel offset (in weeks from current)
@@ -2123,7 +2200,7 @@ function addInlineItemWithDate(dN, dM) {
     if (btn) switchSection('content', btn);
   }
   updateAll();
-  setTimeout(() => openModal(id), 80);
+  setTimeout(() => { _modalIsNew = true; openModal(id); }, 80);
 }
 function openDayView(dN, dM) {
   const dayItems = ITEMS.filter(i => (i.section==='content'||i.section==='archive') && i.day===dN && i.month===dM)
@@ -2358,6 +2435,23 @@ function openModal(id) {
   selectStatus(item?.status||'writing',false);
   selectPriority(item?.priority||'medium',false);
   updateDrivePreview(item?.driveLink||'');
+
+  // Recurring UI
+  if (id === null) _modalIsNew = true; // "Add" button path; addInlineItemWithDate sets it too
+  const isNew = _modalIsNew;
+  const inSeries = !isNew && !!item?.recurringGroupId;
+  // Repeat section: only for new items (no series yet)
+  const repSec = document.getElementById('repeatSection');
+  if (repSec) {
+    repSec.style.display = isNew ? '' : 'none';
+    const tog = document.getElementById('repeatToggle');
+    if (tog) tog.checked = false;
+    document.getElementById('repeatOptions').style.display = 'none';
+  }
+  // Series bar: only for existing series items
+  const serBar = document.getElementById('seriesBar');
+  if (serBar) serBar.style.display = inSeries ? '' : 'none';
+
   document.getElementById('modalOverlay').classList.add('open');
 }
 function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); currentItemId=null; }
@@ -2395,30 +2489,201 @@ function saveItem(){
     hashtags:document.getElementById('modalHashtags').value,
     notes:document.getElementById('modalNotes').value,
     driveLink:document.getElementById('modalDriveLink').value};
-  if(currentItemId===null){
-    const nid=Date.now();
-    const newItem={id:nid,...data,day:null,month:null,section:'content',starred:false};
-    ITEMS.push(newItem); fsSet(nid,newItem); logAction('Added item',title,'➕');
-  } else {
-    const item=ITEMS.find(i=>i.id===currentItemId);
-    if(item){
-      // Auto-move to ✅ when published
-      if(data.status==='published' && item.section!=='archive'){
-        data.section='archive'; item.section='archive';
-        logAction('Published → ✅',title,'✅');
-      } else {
-        logAction('Edited item',title,'✏️');
-      }
-      Object.assign(item,data); fsUpdate(currentItemId,data);
+
+  const isNewItem = _modalIsNew;
+  _modalIsNew = false; // consume the flag
+
+  if(isNewItem){
+    // ── NEW ITEM ──
+    const repeatOn = document.getElementById('repeatToggle')?.checked;
+    // The item may already exist in ITEMS (from addInlineItemWithDate) or not (from "Add" button)
+    let baseItem = currentItemId !== null ? ITEMS.find(i=>i.id===currentItemId) : null;
+
+    if(!baseItem) {
+      // Plain "Add" button — no date pre-set
+      const newId = Date.now();
+      baseItem = {id:newId,...data,day:null,month:null,section:'content',starred:false};
+      ITEMS.push(baseItem); fsSet(newId, baseItem); logAction('Added item',title,'➕');
+      closeModal(); updateAll(); toast('Saved ✓');
+      return;
     }
+
+    if(repeatOn && baseItem.day) {
+      // Batch-create recurring copies
+      const freqDays = parseInt(document.getElementById('repeatFreq').value)||7;
+      const count    = parseInt(document.getElementById('repeatCount').value)||7;
+      const gid = `rg_${Date.now()}`;
+      const fsBatch = db ? db.batch() : null;
+
+      Object.assign(baseItem, data, {recurringGroupId: gid});
+      if(fsBatch) fsBatch.update(db.collection('items').doc(baseItem.id.toString()), {...data, recurringGroupId: gid});
+      else fsUpdate(baseItem.id, {...data, recurringGroupId: gid});
+
+      for(let i=1; i<=count; i++){
+        const copyId = Date.now() + i;
+        const copyDay = addDaysToItem(baseItem.day, baseItem.month, freqDays * i);
+        const copy = {id:copyId,...data,day:copyDay.day,month:copyDay.month,
+          section:'content',starred:false,recurringGroupId:gid};
+        ITEMS.push(copy);
+        if(fsBatch) fsBatch.set(db.collection('items').doc(copyId.toString()), copy);
+        else fsSet(copyId, copy);
+      }
+      if(fsBatch) fsBatch.commit();
+      logAction(`Added recurring series (${count+1}×)`,title,'🔁');
+    } else {
+      Object.assign(baseItem, data);
+      fsUpdate(baseItem.id, data);
+      logAction('Added item',title,'➕');
+    }
+    closeModal(); updateAll(); toast('Saved ✓');
+
+  } else {
+    // ── EXISTING ITEM ──
+    const item=ITEMS.find(i=>i.id===currentItemId);
+    if(!item) return;
+
+    if(item.recurringGroupId) {
+      // Show scope dialog
+      _pendingSaveData = data;
+      _seriesAction = 'edit';
+      document.getElementById('seriesDlgTitle').textContent = 'Edit recurring event';
+      document.getElementById('seriesDlgSub').textContent = 'Which occurrences should be updated?';
+      document.getElementById('seriesScopeAll').textContent = 'All occurrences in series';
+      document.getElementById('seriesScopeAll').className = 'series-scope-btn';
+      document.getElementById('seriesDialog').classList.add('open');
+      return; // wait for scope choice
+    }
+
+    _doSaveItem(item, data);
+    closeModal(); updateAll(); toast('Saved ✓');
   }
-  closeModal(); updateAll(); toast('Saved ✓');
+}
+
+function _doSaveItem(item, data) {
+  if(data.status==='published' && item.section!=='archive'){
+    data.section='archive'; item.section='archive';
+    logAction('Published → ✅',item.title,'✅');
+  } else {
+    logAction('Edited item',item.title,'✏️');
+  }
+  Object.assign(item,data); fsUpdate(item.id,data);
+}
+
+// Add N calendar days to a day/month, handling month rollovers
+function addDaysToItem(day, month, daysToAdd) {
+  const d = new Date(TODAY.getFullYear(), month - 1, day);
+  d.setDate(d.getDate() + daysToAdd);
+  return { day: d.getDate(), month: d.getMonth() + 1 };
 }
 function deleteItemModal(){
   if(currentItemId===null) return;
   const item=ITEMS.find(i=>i.id===currentItemId);
-  if(item){ item.section='deleted'; fsUpdate(item.id,{section:'deleted'}); logAction('Deleted item',item.title,'🗑'); }
+  if(!item) return;
+
+  // If part of a series, show scope dialog
+  if(item.recurringGroupId) {
+    _seriesAction = 'delete';
+    _pendingSaveData = null;
+    document.getElementById('seriesDlgTitle').textContent = 'Delete recurring event';
+    document.getElementById('seriesDlgSub').textContent = 'Which occurrences should be deleted?';
+    document.getElementById('seriesScopeAll').textContent = 'All occurrences in series';
+    document.getElementById('seriesScopeAll').className = 'series-scope-btn danger';
+    document.getElementById('seriesDialog').classList.add('open');
+    return;
+  }
+
+  item.section='deleted'; fsUpdate(item.id,{section:'deleted'});
+  logAction('Deleted item',item.title,'🗑');
   closeModal(); updateAll(); toast('Moved to Trash');
+}
+
+// ══ SERIES SCOPE DIALOG ══
+function onRepeatToggle(checked) {
+  document.getElementById('repeatOptions').style.display = checked ? 'flex' : 'none';
+}
+
+function openSeriesDialog(action) {
+  _seriesAction = action;
+  _pendingSaveData = action === 'edit' ? {
+    title: document.getElementById('modalTitle').value.trim(),
+    type: currentType, status: currentStatus, priority: currentPriority,
+    platform: document.getElementById('modalPlatform').value,
+    time: document.getElementById('modalTime').value,
+    caption: document.getElementById('modalCaption').value,
+    hashtags: document.getElementById('modalHashtags').value,
+    notes: document.getElementById('modalNotes').value,
+    driveLink: document.getElementById('modalDriveLink').value
+  } : null;
+  if(action === 'edit') {
+    document.getElementById('seriesDlgTitle').textContent = 'Edit recurring event';
+    document.getElementById('seriesDlgSub').textContent = 'Which occurrences should be updated?';
+    document.getElementById('seriesScopeAll').textContent = 'All occurrences in series';
+    document.getElementById('seriesScopeAll').className = 'series-scope-btn';
+  } else {
+    document.getElementById('seriesDlgTitle').textContent = 'Delete recurring event';
+    document.getElementById('seriesDlgSub').textContent = 'Which occurrences should be deleted?';
+    document.getElementById('seriesScopeAll').textContent = 'All occurrences in series';
+    document.getElementById('seriesScopeAll').className = 'series-scope-btn danger';
+  }
+  document.getElementById('seriesDialog').classList.add('open');
+}
+
+function closeSeriesDialog() {
+  document.getElementById('seriesDialog').classList.remove('open');
+  _seriesAction = null; _pendingSaveData = null;
+}
+
+function applySeriesScope(scope) {
+  // Capture before closeSeriesDialog nulls them
+  const action = _seriesAction;
+  const savedData = _pendingSaveData;
+  closeSeriesDialog();
+  const item = ITEMS.find(i=>i.id===currentItemId);
+  if(!item) return;
+  const gid = item.recurringGroupId;
+
+  // Get all series items sorted by date
+  const seriesItems = ITEMS.filter(i=>i.recurringGroupId===gid)
+    .sort((a,b)=>{
+      const da=new Date(TODAY.getFullYear(),(a.month||1)-1,a.day||1);
+      const dB=new Date(TODAY.getFullYear(),(b.month||1)-1,b.day||1);
+      return da-dB;
+    });
+
+  // Determine which items to affect
+  let targets;
+  const itemDate = new Date(TODAY.getFullYear(), (item.month||1)-1, item.day||1);
+  if(scope==='one')    targets = [item];
+  else if(scope==='future') targets = seriesItems.filter(i=>{
+    const d=new Date(TODAY.getFullYear(),(i.month||1)-1,i.day||1);
+    return d>=itemDate;
+  });
+  else                 targets = seriesItems; // 'all'
+
+  if(action==='edit' && savedData) {
+    const data = savedData;
+    // Update each target item (fsUpdate individually — series are typically ≤12 items)
+    targets.forEach(t=>{
+      const upd = {...data};
+      // Don't auto-archive via _doSaveItem for bulk — preserve each item's date/section
+      if(upd.status==='published' && t.section!=='archive'){ upd.section='archive'; t.section='archive'; }
+      Object.assign(t, upd);
+      fsUpdate(t.id, upd);
+    });
+    logAction(`Edited ${targets.length} recurring item${targets.length>1?'s':''}`,targets[0]?.title||'','🔁');
+    closeModal(); updateAll(); toast(`Updated ${targets.length} occurrence${targets.length>1?'s':''} ✓`);
+
+  } else if(action==='delete') {
+    const batch = db ? db.batch() : null;
+    targets.forEach(t=>{
+      t.section='deleted';
+      if(batch) batch.update(db.collection('items').doc(t.id.toString()),{section:'deleted'});
+      else fsUpdate(t.id,{section:'deleted'});
+    });
+    if(batch) batch.commit();
+    logAction(`Deleted ${targets.length} recurring item${targets.length>1?'s':''}`,item.title,'🗑');
+    closeModal(); updateAll(); toast(`Deleted ${targets.length} occurrence${targets.length>1?'s':''}`);
+  }
 }
 function copyCaption(){
   const c=document.getElementById('modalCaption').value, h=document.getElementById('modalHashtags').value;
