@@ -731,6 +731,125 @@
     }
     .today-nav-btn:hover { border-color: var(--red); color: var(--red); background: #ef444410; }
 
+    /* ══ FULL-SCREEN TABLE VIEW ══ */
+    #tableView {
+      position: fixed; inset: 0; z-index: 500; background: var(--bg);
+      display: none; flex-direction: column;
+    }
+    #tableView.open { display: flex; }
+    .tv-header {
+      display: flex; align-items: center; gap: 10px; padding: 12px 18px;
+      border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
+    }
+    .tv-back {
+      display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 10px;
+      background: var(--card); border: 1px solid var(--border); color: var(--text);
+      font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.15s;
+    }
+    .tv-back:hover { border-color: var(--accent); color: var(--accent); }
+    .tv-title { font-size: 18px; font-weight: 800; letter-spacing: -0.4px; }
+    .tv-count { font-size: 13px; color: var(--text-dim); font-weight: 600; }
+    .tv-search {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 7px 13px; color: var(--text); font-family: inherit; font-size: 14px;
+      outline: none; width: 220px; transition: border-color 0.15s;
+    }
+    .tv-search:focus { border-color: var(--accent); }
+    .tv-ctl {
+      padding: 7px 12px; border-radius: 10px; background: var(--card);
+      border: 1px solid var(--border); color: var(--text); font-family: inherit;
+      font-size: 13.5px; font-weight: 600; cursor: pointer; outline: none; transition: all 0.15s;
+    }
+    .tv-ctl:hover { border-color: var(--accent); }
+    .tv-ctl.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .tv-scroll { flex: 1; overflow: auto; }
+    .tv-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1500px; }
+    .tv-table thead th {
+      position: sticky; top: 0; z-index: 2; background: var(--surface);
+      text-align: left; padding: 9px 10px; font-size: 11.5px; font-weight: 800;
+      color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.9px;
+      border-bottom: 1px solid var(--border-light); white-space: nowrap; cursor: pointer;
+      user-select: none;
+    }
+    .tv-table thead th:hover { color: var(--accent); }
+    .tv-table thead th.no-sort { cursor: default; }
+    .tv-table thead th.no-sort:hover { color: var(--text-dim); }
+    .tv-table tbody td { padding: 4px 7px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .tv-table tbody tr:hover { background: var(--card); }
+    .tv-table tbody tr.tv-sel { background: var(--accent-dim); }
+    .tv-table tbody tr.tv-done { opacity: 0.62; }
+    /* flat inputs that look like text until focused */
+    .tv-in, .tv-sel-in {
+      width: 100%; background: transparent; border: 1px solid transparent; border-radius: 7px;
+      padding: 6px 8px; color: var(--text); font-family: inherit; font-size: 14px;
+      outline: none; transition: all 0.13s;
+    }
+    .tv-in:hover, .tv-sel-in:hover { background: var(--card-hover); border-color: var(--border); }
+    .tv-in:focus, .tv-sel-in:focus { background: var(--surface); border-color: var(--accent); }
+    .tv-sel-in { cursor: pointer; font-weight: 600; }
+    .tv-sel-in option { background: var(--surface); color: var(--text); }
+    .tv-in-title { font-weight: 600; }
+    .tv-date-cell { display: flex; align-items: center; gap: 3px; }
+    .tv-date-in {
+      background: transparent; border: 1px solid transparent; border-radius: 7px;
+      padding: 5px 6px; color: var(--text); font-family: inherit; font-size: 13px;
+      outline: none; transition: all 0.13s; width: 128px;
+    }
+    .tv-date-in:hover { background: var(--card-hover); border-color: var(--border); }
+    .tv-date-in:focus { background: var(--surface); border-color: var(--accent); }
+    .tv-cal-btn {
+      background: transparent; border: 1px solid var(--border); border-radius: 7px;
+      padding: 4px 7px; font-size: 13px; cursor: pointer; flex-shrink: 0; line-height: 1;
+      color: var(--text-dim); transition: all 0.13s;
+    }
+    .tv-cal-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .tv-check {
+      width: 19px; height: 19px; border-radius: 5px; border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      font-size: 12px; color: white; font-weight: 800; transition: all 0.13s; flex-shrink: 0;
+    }
+    .tv-check:hover { border-color: var(--accent); }
+    .tv-check.on { background: var(--accent); border-color: var(--accent); }
+    .tv-star { background: none; border: none; cursor: pointer; font-size: 15px; opacity: 0.3; transition: opacity 0.13s; }
+    .tv-star.on { opacity: 1; }
+    .tv-sched { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .tv-open-btn {
+      background: transparent; border: 1px solid var(--border); border-radius: 7px;
+      padding: 4px 9px; font-size: 12px; font-weight: 700; cursor: pointer;
+      color: var(--text-dim); font-family: inherit; white-space: nowrap; transition: all 0.13s;
+    }
+    .tv-open-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .tv-bulk {
+      display: none; align-items: center; gap: 9px; padding: 11px 18px;
+      border-top: 1px solid var(--border-light); background: var(--surface); flex-shrink: 0; flex-wrap: wrap;
+    }
+    .tv-bulk.on { display: flex; }
+    .tv-bulk-lbl { font-size: 14px; font-weight: 800; color: var(--accent); }
+    .tv-empty { padding: 60px 20px; text-align: center; color: var(--text-faint); font-size: 15px; }
+    /* date-picker overlay launched from a table row */
+    #tvPicker { position: fixed; inset: 0; z-index: 600; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.55); }
+    #tvPicker.open { display: flex; }
+    .tvp-card { background: var(--surface); border: 1px solid var(--border-light); border-radius: 18px; padding: 18px; width: 400px; box-shadow: 0 26px 70px var(--shadow); }
+    .tvp-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .tvp-title { flex: 1; font-size: 16px; font-weight: 800; text-align: center; }
+    .tvp-nav { background: var(--card); border: 1px solid var(--border); border-radius: 8px; color: var(--text-dim); font-size: 15px; cursor: pointer; padding: 3px 11px; font-family: inherit; }
+    .tvp-nav:hover { border-color: var(--accent); color: var(--accent); }
+    .tvp-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+    .tvp-dow { text-align: center; font-size: 10.5px; font-weight: 800; color: var(--text-dim); padding: 4px 0; }
+    .tvp-day {
+      aspect-ratio: 1; border: 1px solid transparent; border-radius: 9px; background: var(--card);
+      color: var(--text); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+      transition: all 0.12s; padding: 2px;
+    }
+    .tvp-day:hover { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+    .tvp-day.other { opacity: 0.32; }
+    .tvp-day.today { border-color: var(--red); color: var(--red); font-weight: 800; }
+    .tvp-day.sel { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .tvp-day .tvp-hol { font-size: 7px; font-weight: 700; line-height: 1; color: var(--blue); }
+    .tvp-day .tvp-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+    .tvp-foot { display: flex; gap: 8px; margin-top: 13px; }
+
     /* ══ HOLIDAY LAYER ══ */
     .cal-holiday {
       font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
@@ -844,6 +963,7 @@
     <div class="stat-chip c-blue">  <span class="stat-num" id="statTotal">0</span>  <span class="stat-label">Items</span></div>
     <div class="stat-chip c-red">   <span class="stat-num" id="statMissed">0</span> <span class="stat-label">Missed</span></div>
     <div class="stat-chip c-yellow"><span class="stat-num" id="statProg">0</span>   <span class="stat-label">In Progress</span></div>
+    <button class="tv-ctl" style="padding:6px 15px;font-size:14px;font-weight:700" onclick="openTableView()">📋 All Content</button>
   </div>
   <div class="topbar-right">
     <a class="link-btn" href="#" target="_blank">🌐 Website</a>
@@ -1119,6 +1239,109 @@
       <button class="btn btn-copy"      onclick="copyCaption()">📋 Copy</button>
       <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary"   onclick="saveItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FULL-SCREEN TABLE VIEW ══ -->
+<div id="tableView">
+  <div class="tv-header">
+    <button class="tv-back" onclick="closeTableView()">← Back</button>
+    <span class="tv-title">📋 All Content</span>
+    <span class="tv-count" id="tvCount"></span>
+    <input class="tv-search" id="tvSearch" placeholder="Search title, caption, notes…" oninput="onTableSearch(this.value)">
+    <select class="tv-ctl" id="tvStatusFilter" onchange="onTableFilter('status',this.value)">
+      <option value="">All statuses</option>
+      <option value="writing">NeedText</option>
+      <option value="waiting">Waiting</option>
+      <option value="ready">Ready</option>
+      <option value="published">Published</option>
+      <option value="missed">Missed</option>
+      <option value="postponed">Postponed</option>
+    </select>
+    <select class="tv-ctl" id="tvPlatFilter" onchange="onTableFilter('platform',this.value)">
+      <option value="">All platforms</option>
+    </select>
+    <select class="tv-ctl" id="tvSchedFilter" onchange="onTableFilter('sched',this.value)">
+      <option value="">Scheduled + not</option>
+      <option value="yes">Scheduled only</option>
+      <option value="no">No date only</option>
+    </select>
+    <button class="tv-ctl" id="tvDoneBtn" onclick="toggleTableDone()">Show ✅ Done</button>
+    <button class="tv-ctl" onclick="resetTableFilters()">Reset</button>
+    <button class="tv-ctl" style="margin-left:auto" onclick="addRowFromTable()">+ New item</button>
+  </div>
+
+  <div class="tv-scroll">
+    <table class="tv-table">
+      <thead>
+        <tr>
+          <th class="no-sort" style="width:34px"><div class="tv-check" id="tvCheckAll" onclick="toggleTableSelectAll()"></div></th>
+          <th class="no-sort" style="width:22px" title="Green = scheduled, red = no date"></th>
+          <th onclick="setTableSort('title')"    style="min-width:230px">Title</th>
+          <th onclick="setTableSort('type')"     style="width:112px">Type</th>
+          <th onclick="setTableSort('status')"   style="width:132px">Status</th>
+          <th onclick="setTableSort('platform')" style="width:118px">Platform</th>
+          <th onclick="setTableSort('priority')" style="width:112px">Priority</th>
+          <th onclick="setTableSort('date')"     style="width:176px">Date</th>
+          <th class="no-sort" style="width:96px">Time</th>
+          <th onclick="setTableSort('section')"  style="width:118px">Section</th>
+          <th class="no-sort" style="min-width:210px">Caption</th>
+          <th class="no-sort" style="min-width:160px">Hashtags</th>
+          <th class="no-sort" style="min-width:190px">Notes</th>
+          <th class="no-sort" style="min-width:150px">Drive link</th>
+          <th class="no-sort" style="width:44px">⭐</th>
+          <th class="no-sort" style="width:74px"></th>
+        </tr>
+      </thead>
+      <tbody id="tvBody"></tbody>
+    </table>
+    <div class="tv-empty" id="tvEmpty" style="display:none">Nothing matches these filters</div>
+  </div>
+
+  <div class="tv-bulk" id="tvBulk">
+    <span class="tv-bulk-lbl"><span id="tvBulkCount">0</span> selected</span>
+    <select class="tv-ctl" onchange="bulkSet('status',this.value);this.value=''">
+      <option value="">Set status…</option>
+      <option value="writing">NeedText</option><option value="waiting">Waiting</option>
+      <option value="ready">Ready</option><option value="published">Published ✅</option>
+      <option value="missed">Missed</option><option value="postponed">Postponed</option>
+    </select>
+    <select class="tv-ctl" onchange="bulkSet('type',this.value);this.value=''">
+      <option value="">Set type…</option>
+      <option value="post">Post</option><option value="reel">Reel</option>
+      <option value="story">Story</option><option value="general">General</option>
+    </select>
+    <select class="tv-ctl" id="tvBulkPlat" onchange="bulkSet('platform',this.value);this.value=''">
+      <option value="">Set platform…</option>
+    </select>
+    <select class="tv-ctl" onchange="bulkSet('priority',this.value);this.value=''">
+      <option value="">Set priority…</option>
+      <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+    </select>
+    <select class="tv-ctl" onchange="bulkSet('section',this.value);this.value=''">
+      <option value="">Move to…</option>
+      <option value="content">Content</option><option value="backlog">Backlog</option><option value="archive">✅ Done</option>
+    </select>
+    <button class="tv-ctl" onclick="bulkTableStar()">⭐ Star</button>
+    <button class="tv-ctl" onclick="bulkTableClearDate()">Clear date</button>
+    <button class="tv-ctl" style="border-color:#ef444440;color:var(--red)" onclick="bulkTableDelete()">🗑 Delete</button>
+    <button class="tv-ctl" style="margin-left:auto" onclick="clearTableSelection()">✕ Clear</button>
+  </div>
+</div>
+
+<!-- DATE PICKER (launched from a table row) -->
+<div id="tvPicker" onclick="if(event.target===this)closeTvPicker()">
+  <div class="tvp-card">
+    <div class="tvp-head">
+      <button class="tvp-nav" onclick="shiftTvPicker(-1)">‹</button>
+      <span class="tvp-title" id="tvpTitle"></span>
+      <button class="tvp-nav" onclick="shiftTvPicker(1)">›</button>
+    </div>
+    <div class="tvp-grid" id="tvpGrid"></div>
+    <div class="tvp-foot">
+      <button class="tv-ctl" style="flex:1" onclick="pickTvDate(null)">Clear date</button>
+      <button class="tv-ctl" style="flex:1" onclick="closeTvPicker()">Cancel</button>
     </div>
   </div>
 </div>
@@ -1511,7 +1734,8 @@ function renderItems() {
       : `<div class="empty-state">Nothing published yet</div>`;
     return;
   }
-  list.innerHTML = items.length ? items.map(renderCard).join('') : `<div class="empty-state">No items here</div>`;
+  const viewAll = `<button class="tv-ctl" style="width:100%;margin-top:6px;padding:10px" onclick="openTableView()">📋 View all in table</button>`;
+  list.innerHTML = (items.length ? items.map(renderCard).join('') : `<div class="empty-state">No items here</div>`) + viewAll;
 }
 
 function renderGroup(label, items) {
@@ -2994,8 +3218,341 @@ function renderWeekView() {
   cols.innerHTML = html;
 }
 
+// ══════════ FULL-SCREEN TABLE VIEW ══════════
+let tableOpen      = false;
+let tableShowDone  = false;
+let tableSort      = 'date';
+let tableSortDir   = 1;
+let tableSearch    = '';
+let tableFilters   = { status:'', platform:'', sched:'' };
+let tableSelected  = new Set();
+let _tvPickerId    = null;   // item whose date the picker is editing
+let _tvPickerMonth = null;   // Date marking the picker's displayed month
+
+const PLATFORMS = ['Social','FB','IG','ALL','MAIL','WA','FBGRP','Vibez','SMS','General'];
+
+function openTableView() {
+  tableOpen = true;
+  // Populate platform dropdowns once
+  const opts = PLATFORMS.map(p=>`<option value="${p}">${PLAT_ICONS[p]||'📌'} ${p}</option>`).join('');
+  const pf = document.getElementById('tvPlatFilter');
+  if (pf && pf.options.length <= 1) pf.insertAdjacentHTML('beforeend', opts);
+  const bp = document.getElementById('tvBulkPlat');
+  if (bp && bp.options.length <= 1) bp.insertAdjacentHTML('beforeend', opts);
+  document.getElementById('tableView').classList.add('open');
+  renderTableView();
+}
+function closeTableView() {
+  tableOpen = false;
+  document.getElementById('tableView').classList.remove('open');
+  clearTableSelection();
+  updateAll();
+}
+
+function getTableItems() {
+  const allowed = tableShowDone ? ['content','backlog','archive'] : ['content','backlog'];
+  let items = ITEMS.filter(i => allowed.includes(i.section));
+  const q = tableSearch.trim().toLowerCase();
+  if (q) items = items.filter(i =>
+    [i.title,i.caption,i.notes,i.hashtags].some(f => (f||'').toLowerCase().includes(q)));
+  if (tableFilters.status)   items = items.filter(i => i.status === tableFilters.status);
+  if (tableFilters.platform) items = items.filter(i => i.platform === tableFilters.platform);
+  if (tableFilters.sched === 'yes') items = items.filter(i => i.day && i.month);
+  if (tableFilters.sched === 'no')  items = items.filter(i => !i.day || !i.month);
+
+  const P = { high:0, medium:1, low:2 };
+  const S = { missed:0, writing:1, waiting:2, ready:3, postponed:4, published:5 };
+  const key = i => {
+    switch (tableSort) {
+      case 'title':    return (i.title||'').toLowerCase();
+      case 'type':     return i.type||'';
+      case 'status':   return S[i.status] ?? 9;
+      case 'platform': return i.platform||'';
+      case 'priority': return P[i.priority] ?? 9;
+      case 'section':  return i.section||'';
+      default:         // date — undated always sorts last regardless of direction
+        return (i.day && i.month) ? i.month*100 + i.day : null;
+    }
+  };
+  return items.sort((a,b) => {
+    const ka = key(a), kb = key(b);
+    if (ka === null && kb === null) return 0;
+    if (ka === null) return 1;
+    if (kb === null) return -1;
+    if (ka < kb) return -1*tableSortDir;
+    if (ka > kb) return  1*tableSortDir;
+    return 0;
+  });
+}
+
+function renderTableView() {
+  if (!tableOpen) return;
+  const items = getTableItems();
+  const body  = document.getElementById('tvBody');
+  const yr    = TODAY.getFullYear();
+
+  const sel = (val, list, fn) => list.map(o =>
+    `<option value="${o[0]}"${o[0]===val?' selected':''}>${o[1]}</option>`).join('');
+
+  const TYPES  = [['post','Post'],['reel','Reel'],['story','Story'],['general','General']];
+  const STATS  = [['writing','NeedText'],['waiting','Waiting'],['ready','Ready'],
+                  ['published','Published ✅'],['missed','Missed'],['postponed','Postponed']];
+  const PRIOS  = [['high','High'],['medium','Medium'],['low','Low']];
+  const SECS   = [['content','Content'],['backlog','Backlog'],['archive','✅ Done']];
+  const PLATS  = PLATFORMS.map(p => [p, `${PLAT_ICONS[p]||'📌'} ${p}`]);
+
+  body.innerHTML = items.map(i => {
+    const on      = tableSelected.has(i.id);
+    const dateVal = (i.day && i.month)
+      ? `${yr}-${String(i.month).padStart(2,'0')}-${String(i.day).padStart(2,'0')}` : '';
+    const schedColor = (i.day && i.month) ? 'var(--green)' : 'var(--red)';
+    return `<tr class="${on?'tv-sel':''}${i.section==='archive'?' tv-done':''}" data-tv-id="${i.id}">
+      <td><div class="tv-check${on?' on':''}" onclick="toggleTableRow(${i.id},event)">${on?'✓':''}</div></td>
+      <td><span class="tv-sched" style="background:${schedColor}" title="${i.day?'Scheduled':'No date yet'}"></span></td>
+      <td><input class="tv-in tv-in-title" value="${escAttr(i.title)}" onchange="tvEdit(${i.id},'title',this.value)"></td>
+      <td><select class="tv-sel-in" onchange="tvEdit(${i.id},'type',this.value)">${sel(i.type,TYPES)}</select></td>
+      <td><select class="tv-sel-in" onchange="tvEdit(${i.id},'status',this.value)">${sel(i.status,STATS)}</select></td>
+      <td><select class="tv-sel-in" onchange="tvEdit(${i.id},'platform',this.value)">${sel(i.platform,PLATS)}</select></td>
+      <td><select class="tv-sel-in" onchange="tvEdit(${i.id},'priority',this.value)">${sel(i.priority,PRIOS)}</select></td>
+      <td><div class="tv-date-cell">
+        <input type="date" class="tv-date-in" value="${dateVal}" onchange="tvEditDate(${i.id},this.value)">
+        <button class="tv-cal-btn" title="Pick on a calendar" onclick="openTvPicker(${i.id})">📅</button>
+      </div></td>
+      <td><input type="time" class="tv-in" value="${i.time||''}" onchange="tvEdit(${i.id},'time',this.value)"></td>
+      <td><select class="tv-sel-in" onchange="tvEdit(${i.id},'section',this.value)">${sel(i.section,SECS)}</select></td>
+      <td><input class="tv-in" value="${escAttr(i.caption)}"   placeholder="—" onchange="tvEdit(${i.id},'caption',this.value)"></td>
+      <td><input class="tv-in" value="${escAttr(i.hashtags)}"  placeholder="—" onchange="tvEdit(${i.id},'hashtags',this.value)"></td>
+      <td><input class="tv-in" value="${escAttr(i.notes)}"     placeholder="—" onchange="tvEdit(${i.id},'notes',this.value)"></td>
+      <td><input class="tv-in" value="${escAttr(i.driveLink)}" placeholder="—" onchange="tvEdit(${i.id},'driveLink',this.value)"></td>
+      <td><button class="tv-star${i.starred?' on':''}" onclick="tvEdit(${i.id},'starred',${!i.starred})">⭐</button></td>
+      <td><button class="tv-open-btn" onclick="openFromTable(${i.id})">Open</button></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('tvEmpty').style.display = items.length ? 'none' : 'block';
+  document.getElementById('tvCount').textContent =
+    `${items.length} item${items.length===1?'':'s'}${tableShowDone?' (incl. Done)':''}`;
+  document.getElementById('tvDoneBtn').classList.toggle('active', tableShowDone);
+  document.getElementById('tvDoneBtn').textContent = tableShowDone ? 'Hide ✅ Done' : 'Show ✅ Done';
+
+  const allOn = items.length > 0 && items.every(i => tableSelected.has(i.id));
+  const ca = document.getElementById('tvCheckAll');
+  ca.classList.toggle('on', allOn); ca.textContent = allOn ? '✓' : '';
+  updateTableBulkBar();
+}
+
+// Escape a value for safe use inside an HTML attribute
+function escAttr(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;')
+    .replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── cell edits ──
+function tvEdit(id, field, value) {
+  const item = ITEMS.find(i => i.id === id);
+  if (!item) return;
+  const upd = { [field]: value };
+  // Publishing from the table archives the item, same as everywhere else
+  if (field === 'status' && value === 'published' && item.section !== 'archive') {
+    upd.section = 'archive'; item.section = 'archive';
+    logAction('Published → ✅', item.title, '✅');
+  }
+  // Moving to Backlog clears the date, same rule as drag-to-tab
+  if (field === 'section' && value === 'backlog' && (item.day || item.month)) {
+    upd.day = null; upd.month = null; item.day = null; item.month = null;
+  }
+  item[field] = value;
+  fsUpdate(id, upd);
+  renderTableView();
+}
+function tvEditDate(id, val) {
+  const item = ITEMS.find(i => i.id === id);
+  if (!item) return;
+  if (!val) { item.day = null; item.month = null; fsUpdate(id,{day:null,month:null}); }
+  else {
+    const [, m, d] = val.split('-').map(Number);
+    item.day = d; item.month = m;
+    const upd = { day:d, month:m };
+    if (item.section === 'backlog') { item.section = 'content'; upd.section = 'content'; }
+    if (item.status === 'missed')   { item.status = 'writing';  upd.status  = 'writing'; }
+    fsUpdate(id, upd);
+    logAction('Scheduled', `${item.title} → ${String(d).padStart(2,'0')}.${String(m).padStart(2,'0')}`, '📅');
+  }
+  renderTableView();
+}
+function openFromTable(id) { closeTableView(); setTimeout(()=>openModal(id), 60); }
+function addRowFromTable() {
+  const id = Date.now();
+  const item = { id, title:'Untitled', type:'post', status:'writing', priority:'medium',
+    platform:'IG', time:'18:00', caption:'', hashtags:'', notes:'', driveLink:'',
+    section:'content', starred:false, day:null, month:null };
+  ITEMS.unshift(item); fsSet(id, item);
+  logAction('Added item', item.title, '➕');
+  renderTableView();
+  setTimeout(() => {
+    const row = document.querySelector(`[data-tv-id="${id}"] .tv-in-title`);
+    if (row) { row.focus(); row.select(); }
+  }, 60);
+}
+
+// ── filters / sort ──
+function onTableSearch(v) { tableSearch = v; renderTableView(); }
+function onTableFilter(kind, v) { tableFilters[kind] = v; renderTableView(); }
+function toggleTableDone() { tableShowDone = !tableShowDone; renderTableView(); }
+function setTableSort(col) {
+  if (tableSort === col) tableSortDir *= -1;
+  else { tableSort = col; tableSortDir = 1; }
+  renderTableView();
+}
+function resetTableFilters() {
+  tableSearch = ''; tableFilters = { status:'', platform:'', sched:'' };
+  document.getElementById('tvSearch').value = '';
+  ['tvStatusFilter','tvPlatFilter','tvSchedFilter'].forEach(id => document.getElementById(id).value = '');
+  renderTableView();
+}
+
+// ── selection + bulk ──
+function toggleTableRow(id, event) {
+  event.stopPropagation();
+  if (tableSelected.has(id)) tableSelected.delete(id); else tableSelected.add(id);
+  renderTableView();
+}
+function toggleTableSelectAll() {
+  const items = getTableItems();
+  const allOn = items.length > 0 && items.every(i => tableSelected.has(i.id));
+  if (allOn) items.forEach(i => tableSelected.delete(i.id));
+  else       items.forEach(i => tableSelected.add(i.id));
+  renderTableView();
+}
+function clearTableSelection() { tableSelected.clear(); if (tableOpen) renderTableView(); }
+function updateTableBulkBar() {
+  document.getElementById('tvBulkCount').textContent = tableSelected.size;
+  document.getElementById('tvBulk').classList.toggle('on', tableSelected.size > 0);
+}
+function bulkSet(field, value) {
+  if (!value || !tableSelected.size) return;
+  const batch = db ? db.batch() : null;
+  let n = 0;
+  tableSelected.forEach(id => {
+    const item = ITEMS.find(i => i.id === id);
+    if (!item) return;
+    const upd = { [field]: value };
+    if (field === 'status' && value === 'published' && item.section !== 'archive') {
+      upd.section = 'archive'; item.section = 'archive';
+    }
+    if (field === 'section' && value === 'backlog' && (item.day || item.month)) {
+      upd.day = null; upd.month = null; item.day = null; item.month = null;
+    }
+    item[field] = value; n++;
+    if (batch) batch.update(db.collection('items').doc(id.toString()), upd);
+    else fsUpdate(id, upd);
+  });
+  if (batch) batch.commit();
+  logAction(`Bulk set ${field}`, `${n} items → ${value}`, '✏️');
+  toast(`Updated ${n} item${n===1?'':'s'} ✓`);
+  renderTableView();
+}
+function bulkTableStar() {
+  if (!tableSelected.size) return;
+  const batch = db ? db.batch() : null;
+  tableSelected.forEach(id => {
+    const item = ITEMS.find(i => i.id === id);
+    if (!item) return;
+    item.starred = true;
+    if (batch) batch.update(db.collection('items').doc(id.toString()), {starred:true});
+    else fsUpdate(id, {starred:true});
+  });
+  if (batch) batch.commit();
+  toast(`Starred ${tableSelected.size} item${tableSelected.size===1?'':'s'} ⭐`);
+  renderTableView();
+}
+function bulkTableClearDate() {
+  if (!tableSelected.size) return;
+  const batch = db ? db.batch() : null;
+  tableSelected.forEach(id => {
+    const item = ITEMS.find(i => i.id === id);
+    if (!item) return;
+    item.day = null; item.month = null;
+    if (batch) batch.update(db.collection('items').doc(id.toString()), {day:null,month:null});
+    else fsUpdate(id, {day:null,month:null});
+  });
+  if (batch) batch.commit();
+  toast(`Cleared date on ${tableSelected.size} item${tableSelected.size===1?'':'s'}`);
+  renderTableView();
+}
+function bulkTableDelete() {
+  if (!tableSelected.size) return;
+  const n = tableSelected.size;
+  const batch = db ? db.batch() : null;
+  tableSelected.forEach(id => {
+    const item = ITEMS.find(i => i.id === id);
+    if (!item) return;
+    item.section = 'deleted';
+    if (batch) batch.update(db.collection('items').doc(id.toString()), {section:'deleted'});
+    else fsUpdate(id, {section:'deleted'});
+  });
+  if (batch) batch.commit();
+  logAction('Bulk delete', `${n} items → Trash`, '🗑');
+  tableSelected.clear();
+  toast(`Moved ${n} item${n===1?'':'s'} to Trash`);
+  renderTableView();
+}
+
+// ── date picker overlay ──
+function openTvPicker(id) {
+  _tvPickerId = id;
+  const item = ITEMS.find(i => i.id === id);
+  _tvPickerMonth = (item && item.day && item.month)
+    ? new Date(TODAY.getFullYear(), item.month-1, 1)
+    : new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+  document.getElementById('tvPicker').classList.add('open');
+  renderTvPicker();
+}
+function closeTvPicker() {
+  document.getElementById('tvPicker').classList.remove('open');
+  _tvPickerId = null;
+}
+function shiftTvPicker(dir) {
+  _tvPickerMonth.setMonth(_tvPickerMonth.getMonth() + dir);
+  renderTvPicker();
+}
+function renderTvPicker() {
+  const MN = ['January','February','March','April','May','June',
+              'July','August','September','October','November','December'];
+  const m = _tvPickerMonth;
+  document.getElementById('tvpTitle').textContent = `${MN[m.getMonth()]} ${m.getFullYear()}`;
+  const item = ITEMS.find(i => i.id === _tvPickerId);
+
+  const first = new Date(m.getFullYear(), m.getMonth(), 1);
+  const start = new Date(first); start.setDate(1 - first.getDay());   // back up to Sunday
+  let html = ['S','M','T','W','T','F','S'].map(d=>`<div class="tvp-dow">${d}</div>`).join('');
+
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const dN = d.getDate(), dM = d.getMonth()+1;
+    const other   = d.getMonth() !== m.getMonth();
+    const isToday = d.getTime() === TODAY.getTime();
+    const isSel   = item && item.day === dN && item.month === dM;
+    const hol     = getHolidays(d);
+    const busy    = ITEMS.some(x => (x.section==='content'||x.section==='archive') && x.day===dN && x.month===dM);
+    html += `<button class="tvp-day${other?' other':''}${isToday?' today':''}${isSel?' sel':''}"
+       onclick="pickTvDate(${dN},${dM})" title="${hol.map(h=>h.name).join(' · ')}">
+       <span>${dN}</span>
+       ${hol.length?`<span class="tvp-hol">${hol[0].name}</span>`:(busy?'<span class="tvp-dot"></span>':'')}
+     </button>`;
+  }
+  document.getElementById('tvpGrid').innerHTML = html;
+}
+function pickTvDate(dN, dM) {
+  const id = _tvPickerId;
+  closeTvPicker();
+  if (id === null) return;
+  if (dN === null) tvEditDate(id, '');
+  else tvEditDate(id, `${TODAY.getFullYear()}-${String(dM).padStart(2,'0')}-${String(dN).padStart(2,'0')}`);
+}
+
 // ══ INIT ══
-function updateAll(){ updateStats(); renderItems(); renderCalendar(); renderWeekView(); }
+function updateAll(){ updateStats(); renderItems(); renderCalendar(); renderWeekView(); if(tableOpen) renderTableView(); }
 document.getElementById('filterBar').style.display='flex';
 window.addEventListener('resize', () => { if (currentUser) renderCalendar(); });
 
