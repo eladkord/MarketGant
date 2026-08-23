@@ -731,6 +731,23 @@
     }
     .today-nav-btn:hover { border-color: var(--red); color: var(--red); background: #ef444410; }
 
+    /* ══ HOLIDAY LAYER ══ */
+    .cal-holiday {
+      font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
+      margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      direction: rtl; text-align: right; flex-shrink: 0;
+    }
+    .cal-hol-jewish  { background: #3b82f61e; color: var(--blue); }
+    .cal-hol-israeli { background: #10b9811e; color: var(--green); }
+    .wv-holiday {
+      font-size: 8px; font-weight: 700; padding: 0 3px; border-radius: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      direction: rtl; text-align: center; margin-bottom: 2px; flex-shrink: 0;
+    }
+    .cal-sub-row { display: flex; align-items: center; gap: 10px; padding: 10px 13px; background: var(--card); border: 1px solid var(--border); border-radius: 11px; margin-bottom: 8px; }
+    .cal-sub-dot { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+    .cal-sub-lbl { flex: 1; font-size: 14px; font-weight: 600; }
+
     /* ══ MOBILE WEEK VIEW ══ */
     #weekViewPanel { display: none; flex-direction: column; flex: 1; overflow: hidden; background: var(--bg); }
     .wv-header { display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
@@ -2163,6 +2180,93 @@ function closeFloatingPopup() {
 }
 function closeAllModals() { closeFloatingPopup(); }
 
+// ══════════ HOLIDAY CALENDARS ══════════
+// Dates are COMPUTED from the browser's built-in Hebrew calendar (Intl, en-u-ca-hebrew),
+// not hardcoded — so they stay correct in every year, including leap years (Adar I/II).
+const _hebFmt = new Intl.DateTimeFormat('en-u-ca-hebrew', { day:'numeric', month:'long' });
+function hebParts(d) {
+  const p = _hebFmt.formatToParts(d);
+  return { month: p.find(x=>x.type==='month').value, day: +p.find(x=>x.type==='day').value };
+}
+
+// Holiday definitions keyed by Hebrew month + day (or day range).
+// Purim/Shushan Purim use Adar in normal years and Adar II in leap years.
+const HOLIDAY_DEFS = [
+  { cal:'jewish',  months:['Tishri'], from:1,  to:2,  name:'ראש השנה' },
+  { cal:'jewish',  months:['Tishri'], day:10,         name:'יום כיפור' },
+  { cal:'jewish',  months:['Tishri'], from:15, to:21, name:'סוכות' },
+  { cal:'jewish',  months:['Tishri'], day:22,         name:'שמחת תורה' },
+  { cal:'jewish',  months:['Kislev'], from:25, to:30, name:'חנוכה' },
+  { cal:'jewish',  months:['Tevet'],  from:1,  to:3,  name:'חנוכה' },
+  { cal:'jewish',  months:['Adar','Adar II'], day:14, name:'פורים' },
+  { cal:'jewish',  months:['Adar','Adar II'], day:15, name:'שושן פורים' },
+  { cal:'jewish',  months:['Nisan'],  from:15, to:21, name:'פסח' },
+  { cal:'jewish',  months:['Sivan'],  day:6,          name:'שבועות' },
+  { cal:'jewish',  months:['Av'],     day:9,          name:'תשעה באב' },
+  { cal:'israeli', months:['Iyar'],   day:18,         name:'ל״ג בעומר' },
+  { cal:'israeli', months:['Iyar'],   day:28,         name:'יום ירושלים' },
+];
+
+let _holidayCache = {}; // gregorianYear -> { 'M-D': [{name, cal}] }
+
+function holidaysForYear(y) {
+  if (_holidayCache[y]) return _holidayCache[y];
+  const map = {}, hebIndex = {};
+  const add = (d, name, cal) => {
+    const k = `${d.getMonth()+1}-${d.getDate()}`;
+    (map[k] = map[k] || []).push({ name, cal });
+  };
+  // Single pass over the year: match fixed defs and index Hebrew dates for the shifted ones
+  for (let d = new Date(y,0,1); d.getFullYear() === y; d.setDate(d.getDate()+1)) {
+    const { month, day } = hebParts(d);
+    hebIndex[`${month}-${day}`] = new Date(d);
+    for (const def of HOLIDAY_DEFS) {
+      if (!def.months.includes(month)) continue;
+      const lo = def.from ?? def.day, hi = def.to ?? def.day;
+      if (day >= lo && day <= hi) add(d, def.name, def.cal);
+    }
+  }
+  // Israeli memorial/independence days observe postponement rules to avoid Shabbat
+  const shift = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+  let atz = hebIndex['Iyar-5'];
+  if (atz) {
+    const dow = atz.getDay();                       // 0=Sun … 6=Sat
+    if      (dow === 5) atz = shift(atz, -1);       // Fri → Thu
+    else if (dow === 6) atz = shift(atz, -2);       // Sat → Thu
+    else if (dow === 1) atz = shift(atz, +1);       // Mon → Tue
+    add(atz, 'יום העצמאות', 'israeli');
+    add(shift(atz,-1), 'יום הזיכרון', 'israeli');   // always the day before
+  }
+  let sho = hebIndex['Nisan-27'];
+  if (sho) {
+    const dow = sho.getDay();
+    if      (dow === 5) sho = shift(sho, -1);       // Fri → Thu
+    else if (dow === 0) sho = shift(sho, +1);       // Sun → Mon
+    add(sho, 'יום השואה', 'israeli');
+  }
+  _holidayCache[y] = map;
+  return map;
+}
+
+// Which holiday calendars are subscribed — persisted in localStorage
+let CAL_SUBS = (() => {
+  try { return JSON.parse(localStorage.getItem('mg_cals')) || { jewish:true, israeli:true }; }
+  catch(e) { return { jewish:true, israeli:true }; }
+})();
+
+function getHolidays(d) {
+  const map = holidaysForYear(d.getFullYear());
+  const hits = map[`${d.getMonth()+1}-${d.getDate()}`] || [];
+  return hits.filter(h => CAL_SUBS[h.cal]);
+}
+
+function toggleCalSub(cal, on) {
+  CAL_SUBS[cal] = on;
+  localStorage.setItem('mg_cals', JSON.stringify(CAL_SUBS));
+  renderCalendar();
+  logAction(on ? `Subscribed to ${cal} calendar` : `Unsubscribed from ${cal} calendar`, '', '📅');
+}
+
 function renderCalendar() {
   const grid=document.getElementById('calendarGrid'), wrapper=document.getElementById('calWrapper');
   const {start,weeks}=getViewWindow(), total=weeks*7;
@@ -2192,7 +2296,12 @@ function renderCalendar() {
     const dayItems=shown.filter(it=>it.day===dN&&it.month===dM);
     const hasStarred=dayItems.some(it=>it.starred);
     const hasPastUnpub=isPast&&dayItems.some(it=>it.section==='content'&&it.status!=='published');
-    const lbl=String(dN).padStart(2,'0')+(dM!==5?'.'+String(dM).padStart(2,'0'):'');
+    // Show the month suffix only when the cell falls outside the view's leading month
+    const lbl=String(dN).padStart(2,'0')+(dM!==(start.getMonth()+1)?'.'+String(dM).padStart(2,'0'):'');
+    const hol=getHolidays(d);
+    const holHtml=hol.length
+      ? `<div class="cal-holiday cal-hol-${hol[0].cal}" title="${hol.map(h=>h.name).join(' · ')}">${hol.map(h=>h.name).join(' · ')}</div>`
+      : '';
     const chips=dayItems.map(it=>`
       <div class="cal-item-chip chip-${it.type}" draggable="true"
            ondragstart="onChipDragStart(event,${it.id})"
@@ -2206,7 +2315,7 @@ function renderCalendar() {
           ondragover="event.preventDefault();this.classList.add('drop-target')"
           ondragleave="this.classList.remove('drop-target')"
           ondrop="onDropToCell(event,${dN},${dM})">
-        <div class="day-num">${isToday?`<span class="today-dot">${lbl}</span>`:lbl}</div>${chips}</div>`;
+        <div class="day-num">${isToday?`<span class="today-dot">${lbl}</span>`:lbl}</div>${holHtml}${chips}</div>`;
   }
   grid.innerHTML=html;
 }
@@ -2383,6 +2492,30 @@ function renderSettingsTab(tab) {
         <div class="setting-row" style="align-items:flex-start;flex-direction:column;gap:10px">
           <div class="setting-row-label">Accent Color</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap">${dots}</div>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-group-title">Calendar Subscriptions</div>
+        <div class="setting-row" style="align-items:flex-start;flex-direction:column;gap:8px">
+          <div class="setting-row-sub" style="margin-bottom:4px">Overlay holiday layers on the calendar. Dates are computed from the Hebrew calendar, so they stay correct every year.</div>
+          <div style="width:100%">
+            <div class="cal-sub-row">
+              <span class="cal-sub-dot" style="background:var(--blue)"></span>
+              <span class="cal-sub-lbl">חגי ישראל — Jewish Holidays</span>
+              <label class="toggle">
+                <input type="checkbox" ${CAL_SUBS.jewish?'checked':''} onchange="toggleCalSub('jewish',this.checked)">
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+            <div class="cal-sub-row">
+              <span class="cal-sub-dot" style="background:var(--green)"></span>
+              <span class="cal-sub-lbl">ימי זיכרון ועצמאות — Israeli Days</span>
+              <label class="toggle">
+                <input type="checkbox" ${CAL_SUBS.israeli?'checked':''} onchange="toggleCalSub('israeli',this.checked)">
+                <div class="toggle-track"></div>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
       `;
@@ -2845,13 +2978,17 @@ function renderWeekView() {
 
     const headCls = isToday ? 'wv-today' : (hasMissed ? 'wv-missed' : '');
     const colCls  = isToday ? 'wv-today-col' : '';
+    const hol = getHolidays(d);
+    const holHtml = hol.length
+      ? `<div class="wv-holiday cal-hol-${hol[0].cal}" title="${hol.map(h=>h.name).join(' · ')}">${hol[0].name}</div>`
+      : '';
 
     html += `<div class="wv-col ${colCls}" onclick="onWvColClick(${dN},${dM})">
       <div class="wv-col-head ${headCls}">
         <div>${DAY_NAMES[i]}</div>
         <div style="font-size:14px;font-weight:800;color:${isToday?'var(--red)':'inherit'}">${dN}</div>
       </div>
-      <div class="wv-col-body">${chips}${extraBadge}${emptyHint}</div>
+      <div class="wv-col-body">${holHtml}${chips}${extraBadge}${emptyHint}</div>
     </div>`;
   }
   cols.innerHTML = html;
