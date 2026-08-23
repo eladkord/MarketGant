@@ -279,6 +279,13 @@
     .item-card.dragging { opacity: 0.3; }
     .item-card.starred  { border-color: #f5b73135; }
     .item-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+    /* scheduled / unscheduled stripe — Content section only */
+    .item-card.sched-yes::before, .item-card.sched-no::before {
+      content: ''; position: absolute; left: 0; top: 11px; bottom: 11px;
+      width: 3px; border-radius: 0 3px 3px 0;
+    }
+    .item-card.sched-yes::before { background: var(--green); }
+    .item-card.sched-no::before  { background: var(--red); }
     .item-card-top { display: flex; align-items: center; gap: 7px; }
     .select-circle {
       width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border);
@@ -989,6 +996,7 @@
     <div class="modal-header">
       <span class="type-badge" id="modalTypeBadge">Reel</span>
       <input class="modal-title-input" id="modalTitle" placeholder="Item name...">
+      <button class="btn btn-primary" style="padding:8px 20px" onclick="saveItem()">Save</button>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
@@ -1368,6 +1376,7 @@ let lastSelectedId   = null;
 let _seriesAction    = null;  // 'edit' | 'delete' — active scope dialog action
 let _pendingSaveData = null;  // buffered save payload while scope dialog is open
 let _modalIsNew      = false; // true when modal was opened for a brand-new item
+let _pubPopupOpen    = false; // Published? popup currently showing (so drops can refresh it)
 let viewRange       = 'month';
 let viewOffset      = 0;
 let weekViewOffset  = 0; // mobile week panel offset (in weeks from current)
@@ -1500,8 +1509,12 @@ function renderCard(item) {
     ? `${String(item.day).padStart(2,'0')}.${String(item.month).padStart(2,'0')}${item.time ? ' · ' + item.time : ''}`
     : '';
   const isTrash = item.section === 'deleted';
+  // Scheduled stripe: only meaningful in Content (Backlog is unscheduled by design)
+  const schedCls = item.section === 'content'
+    ? (item.day && item.month ? ' sched-yes' : ' sched-no')
+    : '';
   return `
-    <div class="item-card${item.starred?' starred':''}${sel?' selected':''}${multiSelectMode?' multi-select-mode':''}"
+    <div class="item-card${schedCls}${item.starred?' starred':''}${sel?' selected':''}${multiSelectMode?' multi-select-mode':''}"
          data-id="${item.id}" draggable="${!multiSelectMode && !isTrash}"
          ondragstart="onListDragStart(event,${item.id})"
          ondragover="onCardDragOver(event,${item.id})"
@@ -2072,26 +2085,43 @@ function openPublishedPopup() {
     if (!i.day || !i.month) return false;
     return new Date(TODAY.getFullYear(), i.month-1, i.day).getTime() < tm;
   });
-  if (!unpublished.length) { toast('All caught up ✓'); closeFloatingPopup(); return; }
-  const btnStyle = 'padding:5px 14px;border-radius:8px;background:var(--yellow);color:#1a1a2e;border:none;font-weight:700;font-size:13px;cursor:pointer;flex-shrink:0;transition:background 0.25s,color 0.25s;font-family:inherit';
+  if (!unpublished.length) { _pubPopupOpen = false; toast('All caught up ✓'); closeFloatingPopup(); return; }
+  _pubPopupOpen = true;
+  const btnStyle  = 'padding:5px 14px;border-radius:8px;background:var(--yellow);color:#1a1a2e;border:none;font-weight:700;font-size:13px;cursor:pointer;flex-shrink:0;transition:background 0.25s,color 0.25s;font-family:inherit';
+  const iconStyle = 'padding:4px 8px;border-radius:7px;background:transparent;border:1px solid var(--border);color:var(--text-dim);font-size:13px;cursor:pointer;flex-shrink:0;font-family:inherit';
   const listHtml = unpublished.map(i =>
-    `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px" data-pub-id="${i.id}">
-      <div style="flex:1;min-width:0">
+    `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:10px;cursor:grab"
+          data-pub-id="${i.id}" draggable="true" ondragstart="onPubDragStart(event,${i.id})">
+      <span style="color:var(--text-faint);font-size:14px;flex-shrink:0" title="Drag onto the calendar to reschedule">⠿</span>
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="openFromPubPopup(${i.id})">
         <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.title}</div>
         <div style="font-size:12px;color:var(--text-dim)">${String(i.day).padStart(2,'0')}.${String(i.month).padStart(2,'0')} · ${i.platform}</div>
       </div>
+      <button style="${iconStyle}" title="Open item" onclick="openFromPubPopup(${i.id})">✏️ Open</button>
       <button style="${btnStyle}" onclick="markPublishedInPopup(${i.id},this)">Done?</button>
     </div>`
   ).join('');
   showFloatingPopup(`
     <div style="font-size:16px;font-weight:800;margin-bottom:4px">Are these ones Published?</div>
-    <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px">${unpublished.length} past item${unpublished.length>1?'s':''} not yet marked</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px">${unpublished.length} past item${unpublished.length>1?'s':''} not yet marked · drag ⠿ onto the calendar to reschedule</div>
     <div style="display:flex;flex-direction:column;gap:8px" id="pubPopupList">${listHtml}</div>
     <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
       <button onclick="snoozePublishedPopup()" style="padding:6px 14px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text-dim);font-size:13px;cursor:pointer;font-family:inherit">Snooze 10min ⏰</button>
       <button onclick="closeFloatingPopup()" style="padding:6px 14px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text-dim);font-size:13px;cursor:pointer;font-family:inherit">Skip for now</button>
     </div>
   `);
+}
+// Open an item straight from the Published? popup
+function openFromPubPopup(id) {
+  _pubPopupOpen = false;
+  closeFloatingPopup();
+  openModal(id);
+}
+// Drag a row out of the Published? popup onto a calendar cell
+function onPubDragStart(event, id) {
+  event.stopPropagation();
+  dragItemId = id; dragSource = 'pubpopup';
+  event.dataTransfer.effectAllowed = 'move';
 }
 function markPublishedInPopup(id, btn) {
   btn.textContent = 'Done ✅';
@@ -2129,6 +2159,7 @@ function showFloatingPopup(html) {
 function closeFloatingPopup() {
   const p = document.getElementById('floatingPopup');
   if (p) p.innerHTML = '';
+  _pubPopupOpen = false;
 }
 function closeAllModals() { closeFloatingPopup(); }
 
@@ -2287,10 +2318,20 @@ function onChipDragStart(event,id){
 function onDropToCell(event,day,month){
   event.currentTarget.classList.remove('drop-target');
   if(dragItemId===null) return;
+  const wasPubDrag = dragSource === 'pubpopup';
   const item=ITEMS.find(i=>i.id===dragItemId);
-  if(item){ item.day=day; item.month=month; item.section='content'; fsUpdate(dragItemId,{day,month,section:'content'}); logAction('Scheduled',`${item.title} → ${String(day).padStart(2,'0')}.${String(month).padStart(2,'0')}`, '📅'); }
+  if(item){
+    item.day=day; item.month=month; item.section='content';
+    // Rescheduling a missed item forward means it's no longer missed
+    const upd={day,month,section:'content'};
+    if(item.status==='missed'){ item.status='writing'; upd.status='writing'; }
+    fsUpdate(dragItemId,upd);
+    logAction('Scheduled',`${item.title} → ${String(day).padStart(2,'0')}.${String(month).padStart(2,'0')}`, '📅');
+  }
   dragItemId=null; dragSource=null;
   updateAll(); toast(`Scheduled ${String(day).padStart(2,'0')}.${String(month).padStart(2,'0')}`);
+  // Keep the Published? popup in sync after a drag-reschedule out of it
+  if(wasPubDrag && _pubPopupOpen) setTimeout(openPublishedPopup, 60);
 }
 
 // ══ SETTINGS ══
