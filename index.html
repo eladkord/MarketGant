@@ -901,6 +901,49 @@
     .tv-bulk.on { display: flex; }
     .tv-bulk-lbl { font-size: 14px; font-weight: 800; color: var(--accent); }
     .tv-empty { padding: 60px 20px; text-align: center; color: var(--text-faint); font-size: 15px; }
+    /* ── split view: table left, calendar right ── */
+    .tv-main { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+    #tvSplitPane { display: none; flex-direction: column; width: 42%; min-width: 380px;
+                   border-left: 1px solid var(--border-light); background: var(--bg); overflow: hidden; }
+    #tableView.tv-split #tvSplitPane { display: flex; }
+    #tableView.tv-split .tv-scroll { width: 58%; flex: none; }
+    .sc-head { display: flex; align-items: center; gap: 8px; padding: 10px 13px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .sc-title { flex: 1; text-align: center; font-size: 14.5px; font-weight: 800; }
+    .sc-dows { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; padding: 6px 8px 0; flex-shrink: 0; }
+    .sc-dow { text-align: center; font-size: 10px; font-weight: 800; color: var(--text-dim); }
+    .sc-grid { flex: 1; display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; padding: 4px 8px 8px; overflow-y: auto; min-height: 0; }
+    .sc-cell {
+      background: var(--card); border: 1px solid var(--border); border-radius: 9px;
+      padding: 3px; display: flex; flex-direction: column; gap: 2px; min-height: 62px;
+      cursor: pointer; transition: all 0.12s; overflow: hidden;
+    }
+    .sc-cell:hover { border-color: var(--border-light); }
+    .sc-cell.other { opacity: 0.4; }
+    .sc-cell.today { border-color: var(--red); background: #ef444408; }
+    .sc-cell.drop-target { border-color: var(--accent); background: var(--accent-dim); border-style: dashed; }
+    .sc-num { font-size: 11px; font-weight: 700; color: var(--text-dim); padding: 1px 3px; }
+    .sc-cell.today .sc-num { color: #fff; background: var(--red); border-radius: 5px; align-self: flex-start; padding: 1px 6px; }
+    .sc-hol { font-size: 7.5px; font-weight: 700; padding: 0 3px; border-radius: 3px; direction: rtl;
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sc-chip {
+      font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 4px; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; background: var(--accent-dim); color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+    }
+    .sc-more { font-size: 8.5px; font-weight: 700; color: var(--text-faint); padding-left: 3px; }
+    /* shared day hover popup (split calendar + row date picker) */
+    #dayHoverPop {
+      position: fixed; z-index: 950; display: none; background: var(--surface);
+      border: 1px solid var(--border-light); border-radius: 11px; padding: 9px 12px;
+      box-shadow: 0 12px 40px var(--shadow); pointer-events: none; min-width: 170px; max-width: 280px;
+    }
+    #dayHoverPop.open { display: block; }
+    .dhp-date { font-size: 11px; font-weight: 800; color: var(--text-dim); margin-bottom: 5px; }
+    .dhp-row { font-size: 12.5px; font-weight: 600; display: flex; gap: 6px; align-items: baseline; padding: 2px 0; }
+    .dhp-time { font-size: 10.5px; color: var(--text-dim); flex-shrink: 0; min-width: 32px; }
+    .dhp-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dhp-hol { font-size: 11px; font-weight: 700; color: var(--blue); direction: rtl; margin-bottom: 4px; }
+
     /* date-picker overlay launched from a table row */
     #tvPicker { position: fixed; inset: 0; z-index: 600; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.55); }
     #tvPicker.open { display: flex; }
@@ -1199,6 +1242,7 @@
 <!-- ══ CONTEXT MENU ══ -->
 <div class="floating-menu" id="ctxMenu"></div>
 <div id="timePop"></div>
+<div id="dayHoverPop"></div>
 
 <!-- ══ QUICK EDIT DROPDOWN ══ -->
 <div class="floating-menu" id="quickDrop"></div>
@@ -1363,9 +1407,11 @@
     </select>
     <button class="tv-ctl" id="tvDoneBtn" onclick="toggleTableDone()">Show ✅ Done</button>
     <button class="tv-ctl" onclick="resetTableFilters()">Reset</button>
+    <button class="tv-ctl" id="tvSplitBtn" onclick="toggleTableSplit()">⫿ Split + Calendar</button>
     <button class="tv-ctl" style="margin-left:auto" onclick="addRowFromTable()">+ New item</button>
   </div>
 
+  <div class="tv-main">
   <div class="tv-scroll">
     <table class="tv-table">
       <thead>
@@ -1391,6 +1437,22 @@
       <tbody id="tvBody"></tbody>
     </table>
     <div class="tv-empty" id="tvEmpty" style="display:none">Nothing matches these filters</div>
+  </div>
+
+  <!-- SPLIT CALENDAR PANE -->
+  <div id="tvSplitPane">
+    <div class="sc-head">
+      <button class="tvp-nav" onclick="shiftSplitCal(-1)">‹</button>
+      <span class="sc-title" id="scTitle"></span>
+      <button class="tvp-nav" onclick="shiftSplitCal(1)">›</button>
+      <button class="tv-ctl" style="padding:5px 10px;font-size:12px" onclick="splitCalToday()">Today</button>
+    </div>
+    <div class="sc-dows">
+      <div class="sc-dow">SUN</div><div class="sc-dow">MON</div><div class="sc-dow">TUE</div>
+      <div class="sc-dow">WED</div><div class="sc-dow">THU</div><div class="sc-dow">FRI</div><div class="sc-dow">SAT</div>
+    </div>
+    <div class="sc-grid" id="scGrid"></div>
+  </div>
   </div>
 
   <div class="tv-bulk" id="tvBulk">
@@ -3339,6 +3401,102 @@ function renderWeekView() {
 
 
 
+
+// ── shared day hover popup (split calendar + row date picker) ──
+function showDayHover(event, dN, dM) {
+  const pop = document.getElementById('dayHoverPop');
+  const items = ITEMS.filter(i => (i.section==='content'||i.section==='archive') && i.day===dN && i.month===dM)
+    .sort((a,b) => (a.time||'99:99').localeCompare(b.time||'99:99'));
+  const d = new Date(TODAY.getFullYear(), dM-1, dN);
+  const hol = getHolidays(d);
+  if (!items.length && !hol.length) { hideDayHover(); return; }
+  pop.innerHTML =
+    `<div class="dhp-date">${String(dN).padStart(2,'0')}.${String(dM).padStart(2,'0')}</div>` +
+    hol.map(h=>`<div class="dhp-hol">${h.name}</div>`).join('') +
+    items.map(i=>`<div class="dhp-row"><span class="dhp-time">${i.time||'—'}</span><span class="dhp-name">${i.title}</span></div>`).join('');
+  pop.classList.add('open');
+  const r = pop.getBoundingClientRect();
+  const x = Math.min(event.clientX + 14, window.innerWidth  - r.width  - 10);
+  const y = Math.min(event.clientY + 12, window.innerHeight - r.height - 10);
+  pop.style.left = Math.max(8,x) + 'px'; pop.style.top = Math.max(8,y) + 'px';
+}
+function hideDayHover() { document.getElementById('dayHoverPop').classList.remove('open'); }
+
+// ── split view: table left, month calendar right ──
+let splitCalMonth = null;
+function toggleTableSplit() {
+  const tv = document.getElementById('tableView');
+  const on = tv.classList.toggle('tv-split');
+  const btn = document.getElementById('tvSplitBtn');
+  btn.classList.toggle('active', on);
+  btn.textContent = on ? '⫿ Hide calendar' : '⫿ Split + Calendar';
+  if (on) {
+    if (!splitCalMonth) splitCalMonth = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+    renderSplitCal();
+  }
+}
+function shiftSplitCal(dir) { splitCalMonth.setMonth(splitCalMonth.getMonth()+dir); renderSplitCal(); }
+function splitCalToday() { splitCalMonth = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1); renderSplitCal(); }
+
+function renderSplitCal() {
+  const grid = document.getElementById('scGrid');
+  if (!grid || !document.getElementById('tableView').classList.contains('tv-split')) return;
+  const MN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const m = splitCalMonth;
+  document.getElementById('scTitle').textContent = `${MN[m.getMonth()]} ${m.getFullYear()}`;
+
+  const first = new Date(m.getFullYear(), m.getMonth(), 1);
+  const start = new Date(first); start.setDate(1 - first.getDay());
+  const last  = new Date(m.getFullYear(), m.getMonth()+1, 0);
+  const cells = Math.ceil((last.getDate() + first.getDay()) / 7) * 7;
+
+  let html = '';
+  for (let i = 0; i < cells; i++) {
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const dN = d.getDate(), dM = d.getMonth()+1;
+    const other   = d.getMonth() !== m.getMonth();
+    const isToday = d.getTime() === TODAY.getTime();
+    const dayItems = ITEMS.filter(x => (x.section==='content'||x.section==='archive') && x.day===dN && x.month===dM)
+      .sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
+    const hol = getHolidays(d);
+    const shown = dayItems.slice(0,2);
+    const extra = dayItems.length - shown.length;
+    html += `<div class="sc-cell${other?' other':''}${isToday?' today':''}" data-d="${dN}" data-m="${dM}"
+        onclick="onSplitCellClick(${dN},${dM})"
+        onmouseenter="showDayHover(event,${dN},${dM})" onmouseleave="hideDayHover()"
+        ondragover="event.preventDefault();this.classList.add('drop-target')"
+        ondragleave="this.classList.remove('drop-target')"
+        ondrop="onSplitDrop(event,${dN},${dM})">
+      <div class="sc-num">${dN}</div>
+      ${hol.length?`<div class="sc-hol cal-hol-${hol[0].cal}">${hol[0].name}</div>`:''}
+      ${shown.map(x=>`<div class="sc-chip">${x.time?x.time+' ':''}${x.title}</div>`).join('')}
+      ${extra>0?`<div class="sc-more">+${extra} more</div>`:''}
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+function onSplitCellClick(dN, dM) {
+  if (dragItemId !== null) return;
+  const dayItems = ITEMS.filter(i => (i.section==='content'||i.section==='archive') && i.day===dN && i.month===dM);
+  if (!dayItems.length) return;
+  openDayView(dN, dM);
+}
+// drag a table row onto a day in the split calendar
+function onTableRowDragStart(event, id) {
+  dragItemId = id; dragSource = 'table';
+  event.dataTransfer.effectAllowed = 'move';
+}
+function onSplitDrop(event, dN, dM) {
+  event.preventDefault();
+  event.currentTarget.classList.remove('drop-target');
+  hideDayHover();
+  if (dragItemId === null) return;
+  tvEditDate(dragItemId, `${TODAY.getFullYear()}-${String(dM).padStart(2,'0')}-${String(dN).padStart(2,'0')}`);
+  dragItemId = null; dragSource = null;
+  renderSplitCal();
+  toast(`Scheduled ${String(dN).padStart(2,'0')}.${String(dM).padStart(2,'0')}`);
+}
+
 // ══════════ GLOBAL RIGHT-CLICK ══════════
 // The app owns the context menu everywhere, EXCEPT inside editable fields —
 // there the native menu is kept so copy/paste still works.
@@ -3642,7 +3800,8 @@ function renderTableView() {
     const dateVal = (i.day && i.month)
       ? `${yr}-${String(i.month).padStart(2,'0')}-${String(i.day).padStart(2,'0')}` : '';
     const schedColor = (i.day && i.month) ? 'var(--green)' : 'var(--red)';
-    return `<tr class="${on?'tv-sel':''}${i.section==='archive'?' tv-done':''}" data-tv-id="${i.id}">
+    return `<tr class="${on?'tv-sel':''}${i.section==='archive'?' tv-done':''}" data-tv-id="${i.id}"
+      draggable="true" ondragstart="onTableRowDragStart(event,${i.id})">
       <td><div class="tv-check${on?' on':''}" onclick="toggleTableRow(${i.id},event)">${on?'✓':''}</div></td>
       <td><span class="tv-sched" style="background:${schedColor}" title="${i.day?'Scheduled':'No date yet'}"></span></td>
       <td><input class="tv-in tv-in-title" value="${escAttr(i.title)}" onchange="tvEdit(${i.id},'title',this.value)"></td>
@@ -3676,6 +3835,7 @@ function renderTableView() {
   document.getElementById('tvDoneBtn').classList.toggle('active', tableShowDone);
   document.getElementById('tvDoneBtn').textContent = tableShowDone ? 'Hide ✅ Done' : 'Show ✅ Done';
 
+  renderSplitCal();
   const allOn = items.length > 0 && items.every(i => tableSelected.has(i.id));
   const ca = document.getElementById('tvCheckAll');
   ca.classList.toggle('on', allOn); ca.textContent = allOn ? '✓' : '';
@@ -3852,6 +4012,7 @@ function openTvPicker(id) {
 function closeTvPicker() {
   document.getElementById('tvPicker').classList.remove('open');
   _tvPickerId = null;
+  hideDayHover();
 }
 function shiftTvPicker(dir) {
   _tvPickerMonth.setMonth(_tvPickerMonth.getMonth() + dir);
@@ -3877,7 +4038,8 @@ function renderTvPicker() {
     const hol     = getHolidays(d);
     const busy    = ITEMS.some(x => (x.section==='content'||x.section==='archive') && x.day===dN && x.month===dM);
     html += `<button class="tvp-day${other?' other':''}${isToday?' today':''}${isSel?' sel':''}"
-       onclick="pickTvDate(${dN},${dM})" title="${hol.map(h=>h.name).join(' · ')}">
+       onclick="pickTvDate(${dN},${dM})"
+       onmouseenter="showDayHover(event,${dN},${dM})" onmouseleave="hideDayHover()">
        <span>${dN}</span>
        ${hol.length?`<span class="tvp-hol">${hol[0].name}</span>`:(busy?'<span class="tvp-dot"></span>':'')}
      </button>`;
@@ -3929,8 +4091,9 @@ document.addEventListener('click', e => {
       if (list && bar && !list.contains(e.target) && !bar.contains(e.target)) exitMultiSelect();
     }
   }
-  // Hide cal hover tooltip
+  // Hide cal hover tooltips
   hideChipHover();
+  hideDayHover();
 });
 
 // ══ MOBILE UA DETECTION ══
