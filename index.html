@@ -1074,17 +1074,38 @@
     }
     .mb-pub.done { background: var(--green); border-color: var(--green); color: #fff; pointer-events: none; }
 
-    /* week agenda */
-    .mb-day { display: flex; gap: 12px; }
-    .mb-day-rail { display: flex; flex-direction: column; align-items: center; gap: 5px; flex-shrink: 0; width: 38px; }
-    .mb-day-dow { font-size: 9.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--text-faint); }
-    .mb-day-n {
-      width: 31px; height: 31px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
-      font-size: 14.5px; font-weight: 700; background: var(--card); border: 1px solid var(--border);
+    /* week: horizontal day boxes, swipe sideways */
+    .mb-wk-row {
+      display: flex; gap: 8px; overflow-x: auto; flex: 1; min-height: 0;
+      padding-bottom: 6px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
     }
-    .mb-day.today .mb-day-n { background: var(--red); border-color: var(--red); color: #fff; }
-    .mb-day.today .mb-day-dow { color: var(--red); }
-    .mb-day-stack { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding-bottom: 5px; }
+    .mb-wk-row::-webkit-scrollbar { height: 0; }
+    .mb-wk-box {
+      flex: 0 0 150px; min-width: 0; display: flex; flex-direction: column; gap: 7px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 10px 9px; scroll-snap-align: start;
+    }
+    .mb-wk-box.today { border-color: var(--red); background: #ef44440a; }
+    .mb-wk-head { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 0 2px; }
+    .mb-wk-head .dow { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--text-faint); }
+    .mb-wk-head .n {
+      margin-left: auto; width: 27px; height: 27px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 800; background: var(--surface); border: 1px solid var(--border);
+    }
+    .mb-wk-box.today .mb-wk-head .dow { color: var(--red); }
+    .mb-wk-box.today .mb-wk-head .n { background: var(--red); border-color: var(--red); color: #fff; }
+    .mb-wk-items { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+    .mb-wk-items::-webkit-scrollbar { width: 0; }
+    .mb-wk-chip {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 7px 9px; cursor: pointer; flex-shrink: 0;
+    }
+    .mb-wk-chip .r { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: var(--text-dim); }
+    .mb-wk-chip .r .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .mb-wk-chip .t {
+      font-size: 12.5px; font-weight: 600; line-height: 1.35; margin-top: 3px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;
+    }
     .mb-mini {
       display: flex; align-items: center; gap: 8px; background: var(--card);
       border: 1px solid var(--border); border-radius: 11px; padding: 8px 11px; cursor: pointer;
@@ -1101,6 +1122,7 @@
       border: 1px solid #3b82f652; border-radius: 8px; padding: 4px 9px; direction: rtl; text-align: right;
     }
     .mb-hol.israeli { color: var(--green); background: #10b98118; border-color: #10b98152; }
+    #mbWeek { overflow-y: hidden; }
 
     /* search + filters */
     .mb-search {
@@ -4196,6 +4218,7 @@ function mbGo(name) {
     el.classList.toggle('on', el.id === 'mb' + name[0].toUpperCase() + name.slice(1)));
   document.querySelectorAll('.mb-tab').forEach(t => t.classList.toggle('on', t.dataset.s === name));
   if (name === 'add') renderMbAdd();
+  if (name === 'week') mbWkScrollToToday();
   const sc = document.getElementById('mb' + name[0].toUpperCase() + name.slice(1));
   if (sc) sc.scrollTop = 0;
 }
@@ -4293,7 +4316,32 @@ function renderMbToday() {
       + overdue.map(i => mbItemCard(i, {publish:true})).join('') : ''}
     ${!todays.length && !overdue.length
       ? `<div class="mb-empty">Nothing needs you today.<br>Tap <b>+</b> to capture an idea.</div>` : ''}
+    ${mbUpcomingHtml()}
   `;
+}
+
+// Agenda of everything scheduled after today, grouped by date
+function mbUpcomingHtml() {
+  const key = i => i.month * 100 + i.day;
+  const todayKey = (TODAY.getMonth() + 1) * 100 + TODAY.getDate();
+  const upcoming = ITEMS.filter(i => i.section === 'content' && i.day && i.month && key(i) > todayKey)
+    .sort((a, b) => key(a) - key(b) || (a.time || '99:99').localeCompare(b.time || '99:99'));
+  if (!upcoming.length) return '';
+
+  const DOWN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let html = `<div class="mb-slab">Upcoming <span class="c mb-num">${upcoming.length}</span></div>`;
+  let lastKey = null;
+  for (const i of upcoming) {
+    if (key(i) !== lastKey) {
+      lastKey = key(i);
+      const d = new Date(TODAY.getFullYear(), i.month - 1, i.day);
+      const hol = getHolidays(d);
+      html += `<div class="mb-slab" style="color:var(--text-dim)">${DOWN[d.getDay()]} ${String(i.day).padStart(2,'0')}.${String(i.month).padStart(2,'0')}</div>`;
+      if (hol.length) html += `<div class="mb-hol ${hol[0].cal}">${hol.map(h => h.name).join(' · ')}</div>`;
+    }
+    html += mbItemCard(i, { timeFirst: true });
+  }
+  return html;
 }
 
 // ── Week ──
@@ -4306,7 +4354,7 @@ function renderMbWeek() {
   const f = d => `${d.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}`;
   const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-  let days = '';
+  let boxes = '';
   for (let i = 0; i < 7; i++) {
     const d = new Date(base); d.setDate(base.getDate() + i);
     const dN = d.getDate(), dM = d.getMonth() + 1;
@@ -4317,16 +4365,15 @@ function renderMbWeek() {
     const dotFor = st => st==='published' ? 'var(--green)' : st==='missed' ? 'var(--red)'
       : st==='waiting' ? 'var(--yellow)' : st==='ready' ? 'var(--accent)' : 'var(--text-faint)';
 
-    days += `<div class="mb-day${isToday?' today':''}">
-      <div class="mb-day-rail"><span class="mb-day-dow">${DOW[i]}</span><span class="mb-day-n mb-num">${dN}</span></div>
-      <div class="mb-day-stack">
+    boxes += `<div class="mb-wk-box${isToday?' today':''}">
+      <div class="mb-wk-head"><span class="dow">${DOW[i]}</span><span class="n mb-num">${dN}</span></div>
+      <div class="mb-wk-items">
         ${hol.length ? `<div class="mb-hol ${hol[0].cal}">${hol.map(h=>h.name).join(' · ')}</div>` : ''}
-        ${items.map(x => `<div class="mb-mini" onclick="openMbItemSheet(${x.id})">
-            <span class="dot" style="background:${dotFor(x.status)}"></span>
-            <span class="mt mb-num">${x.time||'—'}</span>
-            <span class="mn">${x.starred?'⭐ ':''}${x.title}</span>
+        ${items.map(x => `<div class="mb-wk-chip" onclick="openMbItemSheet(${x.id})">
+            <div class="r"><span class="dot" style="background:${dotFor(x.status)}"></span><span class="mb-num">${x.time||'—'}</span></div>
+            <div class="t">${x.starred?'⭐ ':''}${x.title}</div>
           </div>`).join('')}
-        ${items.length ? '' : `<div class="mb-empty-day" onclick="mbAddOn(${dN},${dM})">+ Nothing scheduled</div>`}
+        <div class="mb-empty-day" onclick="mbAddOn(${dN},${dM})">+ Add</div>
       </div>
     </div>`;
   }
@@ -4338,7 +4385,18 @@ function renderMbWeek() {
         <button class="mb-nav-btn" onclick="mbThisWeek()">Today</button>
         <button class="mb-nav-btn" onclick="mbShiftWeek(1)">›</button>
       </span>
-    </div>${days}`;
+    </div>
+    <div class="mb-wk-row" id="mbWkRow">${boxes}</div>`;
+
+  mbWkScrollToToday();
+}
+// Land on today's box when viewing the current week. Needs the tab to be
+// visible — offsets are 0 while display:none — so mbGo calls it again on open.
+function mbWkScrollToToday() {
+  if (mbWeekOffset !== 0) return;
+  const row = document.getElementById('mbWkRow');
+  const tb = row?.querySelector('.mb-wk-box.today');
+  if (row && tb && row.clientWidth > 0) row.scrollLeft = Math.max(0, tb.offsetLeft - row.offsetLeft - 8);
 }
 function mbShiftWeek(d) { mbWeekOffset += d; renderMbWeek(); }
 function mbThisWeek()   { mbWeekOffset = 0;  renderMbWeek(); }
