@@ -1176,6 +1176,69 @@
     body.mobile-device .drive-preview { height: 160px; }
     body.mobile-device #tableView { display: none !important; }
     body.mobile-device .field-input, body.mobile-device .modal-title-input { font-size: 16px; }
+
+    /* settings panel was 567px — wider than the phone */
+    body.mobile-device .settings-panel { width: 100%; right: -100%; }
+    body.mobile-device .settings-panel.open { right: 0; }
+
+    /* ── month tab (GCal-style grid + day agenda) ── */
+    .mbm-dows { display: grid; grid-template-columns: repeat(7,1fr); padding: 2px 0; }
+    .mbm-dow { text-align: center; font-size: 9.5px; font-weight: 800; letter-spacing: 1px; color: var(--text-faint); }
+    .mbm-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+    .mbm-cell {
+      min-height: 46px; border-radius: 10px; border: 1px solid transparent; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 1px 3px;
+      background: none; font-family: inherit; color: var(--text);
+    }
+    .mbm-cell .n { font-size: 13.5px; font-weight: 700; line-height: 1;
+      width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .mbm-cell.other .n { color: var(--text-faint); }
+    .mbm-cell.today .n { background: var(--red); color: #fff; }
+    .mbm-cell.sel { background: var(--accent-dim); border-color: var(--accent); }
+    .mbm-dots { display: flex; gap: 2.5px; height: 5px; align-items: center; }
+    .mbm-dot { width: 4.5px; height: 4.5px; border-radius: 50%; }
+    .mbm-holbar { width: 14px; height: 3px; border-radius: 2px; background: var(--blue); }
+
+    /* ── bottom sheet (item preview + quick-move) ── */
+    #mbSheet {
+      position: fixed; inset: 0; z-index: 940; display: none;
+      background: rgba(0,0,0,0.5); align-items: flex-end;
+    }
+    #mbSheet.open { display: flex; }
+    .mb-sheet-panel {
+      width: 100%; background: var(--surface); border: 1px solid var(--border-light); border-bottom: none;
+      border-radius: 20px 20px 0 0; padding: 10px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+      display: flex; flex-direction: column; gap: 13px; max-height: 78dvh; overflow-y: auto;
+      animation: mbSheetUp 0.22s ease;
+    }
+    @keyframes mbSheetUp { from { transform: translateY(40px); opacity: 0.5; } to { transform: none; opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .mb-sheet-panel { animation: none; } }
+    .mb-sheet-grip { width: 38px; height: 4px; border-radius: 3px; background: var(--border-light); align-self: center; flex-shrink: 0; }
+    .mb-sheet-title { font-size: 17px; font-weight: 700; line-height: 1.35; word-break: break-word; }
+    .mb-sheet-sub { font-size: 13px; color: var(--text-dim); margin-top: -7px; }
+    .mb-sheet-cap {
+      font-size: 13.5px; color: var(--text-dim); line-height: 1.5; white-space: pre-wrap;
+      max-height: 76px; overflow: hidden; background: var(--card); border: 1px solid var(--border);
+      border-radius: 11px; padding: 9px 12px;
+    }
+    .mb-sheet-actions { display: flex; flex-direction: column; gap: 8px; }
+    .mb-sheet-btn {
+      display: flex; align-items: center; gap: 11px; padding: 13px 15px; border-radius: 12px;
+      background: var(--card); border: 1px solid var(--border); color: var(--text);
+      font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; text-align: left; width: 100%;
+    }
+    .mb-sheet-btn:active { border-color: var(--accent); }
+    .mb-sheet-btn.pub { background: #10b98118; border-color: #10b98166; color: var(--green); }
+    .mb-sheet-btn.danger { color: var(--red); border-color: #ef44444d; }
+    .mb-sheet-date { display: flex; gap: 8px; align-items: center; }
+    .mb-sheet-date input { flex: 1; }
+
+    /* quick-move button on item rows */
+    .mb-move {
+      margin-left: auto; flex-shrink: 0; width: 30px; height: 30px; border-radius: 9px;
+      background: var(--card-hover); border: 1px solid var(--border-light); color: var(--text-dim);
+      font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
   </style>
 </head>
 <body>
@@ -1349,6 +1412,7 @@
   <div class="mb-screens">
     <div class="mb-screen on" id="mbToday"></div>
     <div class="mb-screen" id="mbWeek"></div>
+    <div class="mb-screen" id="mbMonth"></div>
     <div class="mb-screen" id="mbAll"></div>
     <div class="mb-screen" id="mbAdd"></div>
   </div>
@@ -1359,8 +1423,13 @@
     </button>
     <button class="mb-tab" data-s="week" onclick="mbGo('week')"><span class="ic">▤</span>Week</button>
     <button class="mb-tab mb-add" data-s="add" onclick="mbGo('add')"><span class="ic">+</span>Add</button>
+    <button class="mb-tab" data-s="month" onclick="mbGo('month')"><span class="ic">▦</span>Month</button>
     <button class="mb-tab" data-s="all" onclick="mbGo('all')"><span class="ic">≡</span>All</button>
   </nav>
+
+  <div id="mbSheet" onclick="if(event.target===this)closeMbSheet()">
+    <div class="mb-sheet-panel" id="mbSheetPanel"></div>
+  </div>
 </div>
 
 
@@ -4129,7 +4198,7 @@ function mbGo(name) {
 
 function renderMobile() {
   if (!isMobile()) return;
-  renderMbToday(); renderMbWeek(); renderMbAll(); updateMbBadge();
+  renderMbToday(); renderMbWeek(); renderMbMonth(); renderMbAll(); updateMbBadge();
 }
 
 function updateMbBadge() {
@@ -4145,7 +4214,7 @@ function mbItemCard(i, opts) {
   const scheduled = i.day && i.month;
   const date = scheduled ? `${String(i.day).padStart(2,'0')}/${String(i.month).padStart(2,'0')}` : '—';
   const showTime = opts.timeFirst && i.time;
-  return `<div class="mb-item${scheduled?'':' unsched'}${i.status==='published'?' done':''}" onclick="openModal(${i.id})">
+  return `<div class="mb-item${scheduled?'':' unsched'}${i.status==='published'?' done':''}" onclick="openMbItemSheet(${i.id})">
     <div class="mb-item-time">
       <span class="t mb-num">${showTime ? i.time : date}</span>
       <span class="tt">${TYPE_LABELS[i.type]||i.type}</span>
@@ -4155,6 +4224,7 @@ function mbItemCard(i, opts) {
       <div class="mb-item-meta">
         <span class="mb-chip">${PLAT_ICONS[i.platform]||'📌'} ${i.platform}</span>
         <span class="mb-chip s-${i.status}">${STATUS_LABELS[i.status]||i.status}</span>
+        <button class="mb-move" title="Move" onclick="event.stopPropagation();openMbMoveSheet(${i.id})">↷</button>
       </div>
       ${opts.publish && i.status !== 'published'
         ? `<button class="mb-pub" onclick="event.stopPropagation();mbPublish(${i.id},this)">Mark published</button>` : ''}
@@ -4247,7 +4317,7 @@ function renderMbWeek() {
       <div class="mb-day-rail"><span class="mb-day-dow">${DOW[i]}</span><span class="mb-day-n mb-num">${dN}</span></div>
       <div class="mb-day-stack">
         ${hol.length ? `<div class="mb-hol ${hol[0].cal}">${hol.map(h=>h.name).join(' · ')}</div>` : ''}
-        ${items.map(x => `<div class="mb-mini" onclick="openModal(${x.id})">
+        ${items.map(x => `<div class="mb-mini" onclick="openMbItemSheet(${x.id})">
             <span class="dot" style="background:${dotFor(x.status)}"></span>
             <span class="mt mb-num">${x.time||'—'}</span>
             <span class="mn">${x.starred?'⭐ ':''}${x.title}</span>
@@ -4278,6 +4348,163 @@ function mbAddOn(dN, dM) {
   renderMobile();
   _modalIsNew = true;
   setTimeout(() => openModal(id), 60);
+}
+
+// ── Month (GCal-style: grid on top, selected day's agenda below) ──
+let mbMonthCur = null;   // Date at the 1st of the displayed month
+let mbSelDay   = null;   // {d, m} selected day
+
+function renderMbMonth() {
+  const el = document.getElementById('mbMonth');
+  if (!el) return;
+  if (!mbMonthCur) mbMonthCur = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+  if (!mbSelDay)   mbSelDay   = { d: TODAY.getDate(), m: TODAY.getMonth() + 1 };
+  const MN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const m = mbMonthCur;
+
+  const first = new Date(m.getFullYear(), m.getMonth(), 1);
+  const start = new Date(first); start.setDate(1 - first.getDay());
+  const last  = new Date(m.getFullYear(), m.getMonth() + 1, 0);
+  const cells = Math.ceil((last.getDate() + first.getDay()) / 7) * 7;
+
+  const dotFor = st => st === 'published' ? 'var(--green)' : st === 'missed' ? 'var(--red)'
+    : st === 'waiting' ? 'var(--yellow)' : st === 'ready' ? 'var(--accent)' : 'var(--text-faint)';
+
+  let grid = '';
+  for (let i = 0; i < cells; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const dN = d.getDate(), dM = d.getMonth() + 1;
+    const other   = d.getMonth() !== m.getMonth();
+    const isToday = d.getTime() === TODAY.getTime();
+    const isSel   = mbSelDay.d === dN && mbSelDay.m === dM;
+    const items = ITEMS.filter(x => (x.section === 'content' || x.section === 'archive') && x.day === dN && x.month === dM);
+    const hol = getHolidays(d);
+    const dots = items.slice(0, 3).map(x => `<span class="mbm-dot" style="background:${dotFor(x.status)}"></span>`).join('');
+    grid += `<button class="mbm-cell${other ? ' other' : ''}${isToday ? ' today' : ''}${isSel ? ' sel' : ''}"
+        onclick="mbSelectDay(${dN},${dM})">
+      <span class="n mb-num">${dN}</span>
+      <span class="mbm-dots">${dots}</span>
+      ${hol.length ? '<span class="mbm-holbar"></span>' : ''}
+    </button>`;
+  }
+
+  // selected day's agenda
+  const selDate = new Date(TODAY.getFullYear(), mbSelDay.m - 1, mbSelDay.d);
+  const selItems = ITEMS.filter(x => (x.section === 'content' || x.section === 'archive') && x.day === mbSelDay.d && x.month === mbSelDay.m)
+    .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+  const selHol = getHolidays(selDate);
+  const DOWN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const dotHtml = st => `<span class="dot" style="background:${dotFor(st)}"></span>`;
+
+  el.innerHTML = `
+    <div class="mb-slab">${MN[m.getMonth()]} ${m.getFullYear()}
+      <span class="nav">
+        <button class="mb-nav-btn" onclick="mbShiftMonth(-1)">‹</button>
+        <button class="mb-nav-btn" onclick="mbMonthToday()">Today</button>
+        <button class="mb-nav-btn" onclick="mbShiftMonth(1)">›</button>
+      </span>
+    </div>
+    <div class="mbm-dows">${['S','M','T','W','T','F','S'].map(x => `<span class="mbm-dow">${x}</span>`).join('')}</div>
+    <div class="mbm-grid">${grid}</div>
+    <div class="mb-slab">${DOWN[selDate.getDay()]} ${String(mbSelDay.d).padStart(2,'0')}.${String(mbSelDay.m).padStart(2,'0')}
+      ${selItems.length ? `<span class="c mb-num">${selItems.length}</span>` : ''}</div>
+    ${selHol.map(h => `<div class="mb-hol ${h.cal}">${h.name}</div>`).join('')}
+    ${selItems.map(x => `<div class="mb-mini" onclick="openMbItemSheet(${x.id})">
+        ${dotHtml(x.status)}
+        <span class="mt mb-num">${x.time || '—'}</span>
+        <span class="mn">${x.starred ? '⭐ ' : ''}${x.title}</span>
+      </div>`).join('')}
+    <div class="mb-empty-day" onclick="mbAddOn(${mbSelDay.d},${mbSelDay.m})">+ Add on this day</div>`;
+}
+function mbSelectDay(dN, dM) { mbSelDay = { d: dN, m: dM }; renderMbMonth(); }
+function mbShiftMonth(dir)   { mbMonthCur.setMonth(mbMonthCur.getMonth() + dir); renderMbMonth(); }
+function mbMonthToday() {
+  mbMonthCur = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+  mbSelDay = { d: TODAY.getDate(), m: TODAY.getMonth() + 1 };
+  renderMbMonth();
+}
+
+// ── bottom sheet: item preview ──
+function openMbItemSheet(id) {
+  const i = ITEMS.find(x => x.id === id);
+  if (!i) return;
+  const date = (i.day && i.month) ? `${String(i.day).padStart(2,'0')}.${String(i.month).padStart(2,'0')}` : 'No date';
+  document.getElementById('mbSheetPanel').innerHTML = `
+    <div class="mb-sheet-grip"></div>
+    <div class="mb-sheet-title">${i.starred ? '⭐ ' : ''}${i.title}</div>
+    <div class="mb-sheet-sub mb-num">${date}${i.time ? ' · ' + i.time : ''}</div>
+    <div class="mb-item-meta">
+      <span class="mb-chip">${TYPE_LABELS[i.type] || i.type}</span>
+      <span class="mb-chip">${PLAT_ICONS[i.platform] || '📌'} ${i.platform}</span>
+      <span class="mb-chip s-${i.status}">${STATUS_LABELS[i.status] || i.status}</span>
+    </div>
+    ${i.caption ? `<div class="mb-sheet-cap">${i.caption}</div>` : ''}
+    <div class="mb-sheet-actions">
+      ${i.status !== 'published'
+        ? `<button class="mb-sheet-btn pub" onclick="mbSheetPublish(${i.id})">✅&nbsp; Mark published</button>` : ''}
+      <button class="mb-sheet-btn" onclick="openMbMoveSheet(${i.id})">↷&nbsp; Move / reschedule</button>
+      <button class="mb-sheet-btn" onclick="closeMbSheet();openModal(${i.id})">✏️&nbsp; Edit everything</button>
+    </div>`;
+  document.getElementById('mbSheet').classList.add('open');
+}
+function closeMbSheet() { document.getElementById('mbSheet').classList.remove('open'); }
+function mbSheetPublish(id) {
+  const item = ITEMS.find(i => i.id === id);
+  if (!item) return;
+  item.status = 'published'; item.section = 'archive';
+  fsUpdate(id, { status: 'published', section: 'archive' });
+  logAction('Published → ✅', item.title, '✅');
+  closeMbSheet(); renderMobile(); updateStats(); toast('Published ✓');
+}
+
+// ── bottom sheet: quick-move ──
+function openMbMoveSheet(id) {
+  const i = ITEMS.find(x => x.id === id);
+  if (!i) return;
+  document.getElementById('mbSheetPanel').innerHTML = `
+    <div class="mb-sheet-grip"></div>
+    <div class="mb-sheet-title">↷ Move “${i.title}”</div>
+    <div class="mb-sheet-actions">
+      <button class="mb-sheet-btn" onclick="mbApplyMove(${i.id},'today')">📅&nbsp; Today</button>
+      <button class="mb-sheet-btn" onclick="mbApplyMove(${i.id},'tomorrow')">🌅&nbsp; Tomorrow</button>
+      <button class="mb-sheet-btn" onclick="mbApplyMove(${i.id},'nextweek')">⏭&nbsp; +1 week</button>
+      <div class="mb-sheet-date">
+        <input type="date" class="mb-in" id="mbMoveDate">
+        <button class="mb-sheet-btn" style="width:auto" onclick="mbApplyMove(${i.id},'pick')">Go</button>
+      </div>
+      <button class="mb-sheet-btn danger" onclick="mbApplyMove(${i.id},'backlog')">📦&nbsp; To Backlog (clears date)</button>
+    </div>`;
+  document.getElementById('mbSheet').classList.add('open');
+}
+function mbApplyMove(id, kind) {
+  const item = ITEMS.find(i => i.id === id);
+  if (!item) return;
+  let day = null, month = null;
+  if (kind === 'today') { day = TODAY.getDate(); month = TODAY.getMonth() + 1; }
+  else if (kind === 'tomorrow') { const t = new Date(TODAY); t.setDate(t.getDate() + 1); day = t.getDate(); month = t.getMonth() + 1; }
+  else if (kind === 'nextweek') {
+    const base = (item.day && item.month) ? new Date(TODAY.getFullYear(), item.month - 1, item.day) : new Date(TODAY);
+    base.setDate(base.getDate() + 7); day = base.getDate(); month = base.getMonth() + 1;
+  }
+  else if (kind === 'pick') {
+    const v = document.getElementById('mbMoveDate')?.value;
+    if (!v) { toast('Pick a date first'); return; }
+    const parts = v.split('-'); day = Number(parts[2]); month = Number(parts[1]);
+  }
+  const upd = {};
+  if (kind === 'backlog') {
+    item.section = 'backlog'; item.day = null; item.month = null;
+    upd.section = 'backlog'; upd.day = null; upd.month = null;
+    logAction('Moved to Backlog', item.title, '📦');
+  } else {
+    item.day = day; item.month = month; item.section = 'content';
+    upd.day = day; upd.month = month; upd.section = 'content';
+    if (item.status === 'missed') { item.status = 'writing'; upd.status = 'writing'; }
+    logAction('Scheduled', `${item.title} → ${String(day).padStart(2,'0')}.${String(month).padStart(2,'0')}`, '📅');
+  }
+  fsUpdate(id, upd);
+  closeMbSheet(); renderMobile(); updateStats();
+  toast(kind === 'backlog' ? 'Moved to Backlog' : `Moved → ${String(day).padStart(2,'0')}.${String(month).padStart(2,'0')}`);
 }
 
 // ── All ──
