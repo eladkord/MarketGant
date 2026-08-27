@@ -348,7 +348,7 @@
     /* ══ FLOATING MENUS ══ */
     .floating-menu {
       position: fixed; background: var(--surface); border: 1px solid var(--border-light);
-      border-radius: 14px; padding: 5px; z-index: 500;
+      border-radius: 14px; padding: 5px; z-index: 800;
       box-shadow: 0 16px 43px var(--shadow); display: none; min-width: 210px;
     }
     .floating-menu.open { display: block; }
@@ -428,7 +428,11 @@
     .cal-cell.starred-day { border-top: 2px solid var(--gold); }
     .cal-cell:not(.empty):hover { border-color: var(--border-light); }
     .day-num { font-size: 14px; font-weight: 700; color: var(--text-dim); line-height: 1; margin-bottom: 1px; flex-shrink: 0; }
-    .today-dot { display: inline-flex; align-items: center; justify-content: center; width: 27px; height: 27px; background: var(--red); color: white; border-radius: 50%; font-size: 14px; font-weight: 800; }
+    .today-box { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 24px; padding: 0 6px; background: var(--red); color: white; border-radius: 7px; font-size: 14px; font-weight: 800; }
+    /* days spilling in from the neighbouring month read as idle */
+    .cal-cell.other-month { background: transparent; opacity: 0.42; }
+    .cal-cell.other-month .day-num { color: var(--text-faint); }
+    .cal-cell.other-month:hover { opacity: 0.72; }
     .cal-item-chip {
       display: flex; align-items: center; gap: 3px; border-radius: 5px;
       padding: 3px 5px; font-size: 11.5px; font-weight: 600; cursor: grab;
@@ -730,6 +734,77 @@
       color: var(--text-dim); font-family: inherit; transition: all 0.15s; letter-spacing: 0.4px;
     }
     .today-nav-btn:hover { border-color: var(--red); color: var(--red); background: #ef444410; }
+
+    /* ══ CHECKLIST ══ */
+    .chk-head { display: flex; align-items: center; gap: 9px; }
+    .chk-count { font-size: 12.5px; font-weight: 700; color: var(--text-dim); }
+    .chk-oncard { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12.5px; color: var(--text-dim); cursor: pointer; user-select: none; }
+    .chk-oncard input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+    .chk-list { display: flex; flex-direction: column; gap: 6px; }
+    .chk-row { display: flex; align-items: center; gap: 8px; padding: 6px 9px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
+    .chk-row:hover { border-color: var(--border-light); }
+    .chk-box {
+      width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      font-size: 12px; color: #fff; font-weight: 800; flex-shrink: 0; transition: all 0.13s;
+    }
+    .chk-box:hover { border-color: var(--green); }
+    .chk-box.on { background: var(--green); border-color: var(--green); }
+    .chk-text {
+      flex: 1; min-width: 0; background: transparent; border: 1px solid transparent; border-radius: 7px;
+      padding: 5px 7px; color: var(--text); font-family: inherit; font-size: 15px; outline: none; transition: all 0.13s;
+    }
+    .chk-text:hover { background: var(--card-hover); border-color: var(--border); }
+    .chk-text:focus { background: var(--surface); border-color: var(--accent); }
+    .chk-text.done { text-decoration: line-through; color: var(--text-faint); }
+    .chk-due {
+      background: transparent; border: 1px solid transparent; border-radius: 7px; padding: 4px 6px;
+      color: var(--text-dim); font-family: inherit; font-size: 12.5px; outline: none; width: 134px; flex-shrink: 0;
+    }
+    .chk-due:hover { background: var(--card-hover); border-color: var(--border); }
+    .chk-due:focus { background: var(--surface); border-color: var(--accent); color: var(--text); }
+    .chk-due.overdue { color: var(--red); font-weight: 700; }
+    .chk-del { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 15px; padding: 2px 5px; border-radius: 6px; flex-shrink: 0; }
+    .chk-del:hover { color: var(--red); background: #ef444415; }
+    .chk-add {
+      padding: 7px 13px; border-radius: 9px; background: transparent; border: 1px dashed var(--border-light);
+      color: var(--text-dim); font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all 0.13s;
+    }
+    .chk-add:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .chk-empty { font-size: 13px; color: var(--text-faint); padding: 4px 2px; }
+    /* progress chip shown on the item card */
+    .chk-chip {
+      font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 7px;
+      background: var(--card-hover); color: var(--text-dim); border: 1px solid var(--border); white-space: nowrap;
+    }
+    .chk-chip.done { background: #10b98118; color: var(--green); border-color: #10b98140; }
+    .chk-chip.overdue { background: #ef444415; color: var(--red); border-color: #ef444440; }
+
+    /* ══ TIME PICKER ══ */
+    .time-field { position: relative; display: flex; align-items: center; gap: 6px; }
+    .time-field .field-input { padding-right: 40px; }
+    .time-clock-btn {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--text-dim); font-size: 16px;
+      cursor: pointer; padding: 3px; line-height: 1; border-radius: 6px;
+    }
+    .time-clock-btn:hover { color: var(--accent); background: var(--accent-dim); }
+    #timePop {
+      position: fixed; z-index: 900; display: none; flex-direction: column;
+      background: var(--surface); border: 1px solid var(--border-light); border-radius: 12px;
+      box-shadow: 0 16px 48px var(--shadow); padding: 5px; width: 132px;
+      max-height: 244px; overflow-y: auto;
+    }
+    #timePop.open { display: flex; }
+    #timePop::-webkit-scrollbar { width: 5px; }
+    #timePop::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 5px; }
+    .tp-opt {
+      padding: 7px 11px; border-radius: 8px; font-size: 14px; font-weight: 600;
+      color: var(--text); cursor: pointer; white-space: nowrap; border: 1px solid transparent;
+    }
+    .tp-opt:hover, .tp-opt.hot { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+    .tp-opt.cur { background: var(--accent); color: #fff; }
+    .tp-empty { padding: 9px 11px; font-size: 12.5px; color: var(--text-faint); }
 
     /* ══ FULL-SCREEN TABLE VIEW ══ */
     #tableView {
@@ -1123,6 +1198,7 @@
 
 <!-- ══ CONTEXT MENU ══ -->
 <div class="floating-menu" id="ctxMenu"></div>
+<div id="timePop"></div>
 
 <!-- ══ QUICK EDIT DROPDOWN ══ -->
 <div class="floating-menu" id="quickDrop"></div>
@@ -1182,7 +1258,12 @@
         </div>
         <div class="field-group">
           <div class="field-label">Publish Time</div>
-          <input class="field-input" type="time" id="modalTime" value="18:00">
+          <div class="time-field">
+            <input class="field-input" id="modalTime" value="18:00" placeholder="HH:MM" autocomplete="off"
+                   onfocus="openTimePop(this)" oninput="filterTimePop(this)"
+                   onkeydown="onTimeKey(event,this)" onblur="commitTimeOnBlur(this)">
+            <button type="button" class="time-clock-btn" onclick="toggleTimePop(document.getElementById('modalTime'))">🕐</button>
+          </div>
         </div>
       </div>
       <div class="field-group">
@@ -1201,6 +1282,19 @@
         <div class="field-label">Google Drive Link (image / video)</div>
         <input class="field-input" id="modalDriveLink" placeholder="https://drive.google.com/file/d/..." oninput="updateDrivePreview(this.value)">
         <div class="drive-preview" id="drivePreview"><span>📁 Paste a Drive link to preview</span></div>
+      </div>
+
+      <div class="field-group">
+        <div class="chk-head">
+          <div class="field-label">Checklist</div>
+          <span class="chk-count" id="chkCount"></span>
+          <label class="chk-oncard">
+            <input type="checkbox" id="chkOnCard" onchange="setChecklistOnCard(this.checked)">
+            Show on card
+          </label>
+        </div>
+        <div class="chk-list" id="chkList"></div>
+        <button type="button" class="chk-add" onclick="addChecklistItem()">+ Add subtask</button>
       </div>
 
       <!-- REPEAT SECTION — shown only for new items -->
@@ -1750,6 +1844,10 @@ function renderCard(item) {
     ? `${String(item.day).padStart(2,'0')}.${String(item.month).padStart(2,'0')}${item.time ? ' · ' + item.time : ''}`
     : '';
   const isTrash = item.section === 'deleted';
+  const cs = checklistStats(item);
+  const chkChip = (item.showChecklist && cs.total)
+    ? `<span class="chk-chip${cs.done===cs.total?' done':(cs.overdue?' overdue':'')}">☑ ${cs.done}/${cs.total}</span>`
+    : '';
   // Scheduled stripe: only meaningful in Content (Backlog is unscheduled by design)
   const schedCls = item.section === 'content'
     ? (item.day && item.month ? ' sched-yes' : ' sched-no')
@@ -1775,6 +1873,7 @@ function renderCard(item) {
         <div class="item-meta">
           <span class="platform-tag" onclick="showQuickDrop(event,${item.id},'platform')">${PLAT_ICONS[item.platform]||'📌'} ${item.platform}</span>
           ${dateStr ? `<span class="scheduled-date${item.starred?' starred-date':''}">${dateStr}</span>` : ''}
+          ${chkChip}
         </div>
         <span class="status-badge s-${item.status}" onclick="showQuickDrop(event,${item.id},'status')">${STATUS_LABELS[item.status]||item.status}</span>
       </div>
@@ -1946,10 +2045,17 @@ function openCtxMenu(event, id) {
       <div class="fm-item danger" onclick="ctxAction('delete')"><span class="fi">🗑</span> Delete</div>`;
   }
 
+  showCtxMenu(items_html, event);
+}
+// Places #ctxMenu at the pointer, flipping when it would overflow the viewport
+function showCtxMenu(html, event) {
   const m = document.getElementById('ctxMenu');
-  m.innerHTML = items_html; m.classList.add('open');
-  m.style.left = Math.min(event.clientX, window.innerWidth-180) + 'px';
-  m.style.top  = Math.min(event.clientY, window.innerHeight-260) + 'px';
+  m.innerHTML = html; m.classList.add('open');
+  m.style.left = '0px'; m.style.top = '0px';
+  const r = m.getBoundingClientRect();
+  const x = event.clientX + r.width  > window.innerWidth  - 8 ? Math.max(8, event.clientX - r.width)  : event.clientX;
+  const y = event.clientY + r.height > window.innerHeight - 8 ? Math.max(8, event.clientY - r.height) : event.clientY;
+  m.style.left = x + 'px'; m.style.top = y + 'px';
 }
 function closeCtxMenu() { document.getElementById('ctxMenu').classList.remove('open'); ctxItemId = null; }
 function ctxAction(action) {
@@ -2214,7 +2320,7 @@ function getViewWindow() {
   if (viewRange === 'custom' && customViewStart) {
     const s = new Date(customViewStart); s.setDate(s.getDate()-s.getDay());
     const e = new Date(customViewEnd||customViewStart); e.setDate(e.getDate()+(6-e.getDay()));
-    return { start:s, weeks:Math.max(1,Math.ceil((e-s)/(7*86400000))+1) };
+    return { start:s, weeks:Math.max(1,Math.ceil((e-s)/(7*86400000))+1), anchor:new Date(customViewStart) };
   }
   const today = new Date(TODAY);
   let start, weeks;
@@ -2231,7 +2337,7 @@ function getViewWindow() {
     const lastDay = new Date(m.getFullYear(), m.getMonth()+1, 0);
     const endDay  = new Date(lastDay); endDay.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
     weeks = Math.ceil((endDay - start) / (7*86400000));
-    return { start, weeks };
+    return { start, weeks, anchor: m };
   } else if (viewRange === '60d') {
     start = new Date(today); start.setDate(today.getDate()-today.getDay()); weeks = 9;
     start.setDate(start.getDate() + viewOffset * 63);
@@ -2239,7 +2345,7 @@ function getViewWindow() {
     start = new Date(today); start.setDate(today.getDate()-today.getDay()); weeks = 4;
     start.setDate(start.getDate() + viewOffset * 28);
   }
-  return { start, weeks };
+  return { start, weeks, anchor: start };
 }
 function goToday() { viewOffset = 0; renderCalendar(); }
 function shiftView(dir) { viewOffset += dir; renderCalendar(); }
@@ -2493,12 +2599,13 @@ function toggleCalSub(cal, on) {
 
 function renderCalendar() {
   const grid=document.getElementById('calendarGrid'), wrapper=document.getElementById('calWrapper');
-  const {start,weeks}=getViewWindow(), total=weeks*7;
+  const {start,weeks,anchor}=getViewWindow(), total=weeks*7;
+  const viewMonth=anchor.getMonth(), viewYear=anchor.getFullYear();
   renderTodayBar();
   const endD=new Date(start); endD.setDate(endD.getDate()+total-1);
   document.getElementById('rangeDateLabel').textContent=fmtDate(start)+' — '+fmtDate(endD);
   const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  document.getElementById('calMonthTitle').textContent=MN[start.getMonth()]+' '+start.getFullYear();
+  document.getElementById('calMonthTitle').textContent=MN[viewMonth]+' '+viewYear;
   if (weeks <= 6) {
     wrapper.classList.remove('scrollable');
     grid.style.flex = '1';
@@ -2517,29 +2624,32 @@ function renderCalendar() {
     const dN=d.getDate(), dM=d.getMonth()+1;
     const isToday=d.getTime()===TODAY.getTime();
     const isPast=d.getTime()<TODAY.getTime();
-    const dayItems=shown.filter(it=>it.day===dN&&it.month===dM);
+    // Earliest first; undated-time items sink to the bottom of the day
+    const dayItems=shown.filter(it=>it.day===dN&&it.month===dM)
+      .sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
     const hasStarred=dayItems.some(it=>it.starred);
     const hasPastUnpub=isPast&&dayItems.some(it=>it.section==='content'&&it.status!=='published');
-    // Show the month suffix only when the cell falls outside the view's leading month
-    const lbl=String(dN).padStart(2,'0')+(dM!==(start.getMonth()+1)?'.'+String(dM).padStart(2,'0'):'');
+    const outOfMonth=(d.getMonth()!==viewMonth||d.getFullYear()!==viewYear);
+    const lbl=String(dN);
     const hol=getHolidays(d);
     const holHtml=hol.length
       ? `<div class="cal-holiday cal-hol-${hol[0].cal}" title="${hol.map(h=>h.name).join(' · ')}">${hol.map(h=>h.name).join(' · ')}</div>`
       : '';
     const chips=dayItems.map(it=>`
-      <div class="cal-item-chip chip-${it.type}" draggable="true"
+      <div class="cal-item-chip chip-${it.type}" draggable="true" data-id="${it.id}"
            ondragstart="onChipDragStart(event,${it.id})"
            onclick="event.stopPropagation();openModal(${it.id})"
            onmouseenter="showChipHover(event,${it.id})"
            onmouseleave="hideChipHover()">
         ${it.time?`<span class="chip-time">${it.time}</span>`:''}${it.starred?'⭐':''}${it.title}
       </div>`).join('');
-    html+=`<div class="cal-cell${isToday?' today':''}${hasPastUnpub?' past-unpub':''}${hasStarred?' starred-day':''}"
+    html+=`<div class="cal-cell${isToday?' today':''}${outOfMonth?' other-month':''}${hasPastUnpub?' past-unpub':''}${hasStarred?' starred-day':''}"
+          data-d="${dN}" data-m="${dM}"
           onclick="onCalCellClick(${dN},${dM})"
           ondragover="event.preventDefault();this.classList.add('drop-target')"
           ondragleave="this.classList.remove('drop-target')"
           ondrop="onDropToCell(event,${dN},${dM})">
-        <div class="day-num">${isToday?`<span class="today-dot">${lbl}</span>`:lbl}</div>${holHtml}${chips}</div>`;
+        <div class="day-num">${isToday?`<span class="today-box">${lbl}</span>`:lbl}</div>${holHtml}${chips}</div>`;
   }
   grid.innerHTML=html;
 }
@@ -2834,6 +2944,12 @@ function openModal(id) {
   selectPriority(item?.priority||'medium',false);
   updateDrivePreview(item?.driveLink||'');
 
+  // Checklist — deep-copy so Cancel doesn't leak edits back into the item
+  _modalChecklist = (item?.checklist || []).map(c => ({ ...c }));
+  _modalChkOnCard = !!item?.showChecklist;
+  document.getElementById('chkOnCard').checked = _modalChkOnCard;
+  renderChecklist();
+
   // Recurring UI
   if (id === null) _modalIsNew = true; // "Add" button path; addInlineItemWithDate sets it too
   const isNew = _modalIsNew;
@@ -2886,7 +3002,9 @@ function saveItem(){
     caption:document.getElementById('modalCaption').value,
     hashtags:document.getElementById('modalHashtags').value,
     notes:document.getElementById('modalNotes').value,
-    driveLink:document.getElementById('modalDriveLink').value};
+    driveLink:document.getElementById('modalDriveLink').value,
+    checklist:collectChecklist(),
+    showChecklist:_modalChkOnCard};
 
   const isNewItem = _modalIsNew;
   _modalIsNew = false; // consume the flag
@@ -3218,6 +3336,224 @@ function renderWeekView() {
   cols.innerHTML = html;
 }
 
+
+
+
+// ══════════ GLOBAL RIGHT-CLICK ══════════
+// The app owns the context menu everywhere, EXCEPT inside editable fields —
+// there the native menu is kept so copy/paste still works.
+function isEditableTarget(t) {
+  if (!t || !t.closest) return false;
+  return !!t.closest('input, textarea, select, [contenteditable="true"]');
+}
+
+function openCellCtxMenu(event, dN, dM) {
+  const dl = `${String(dN).padStart(2,'0')}.${String(dM).padStart(2,'0')}`;
+  const dayItems = ITEMS.filter(i => (i.section==='content'||i.section==='archive') && i.day===dN && i.month===dM);
+  showCtxMenu(`
+    <div class="fm-item" onclick="closeCtxMenu();addInlineItemWithDate(${dN},${dM})"><span class="fi">➕</span> Add item on ${dl}</div>
+    ${dayItems.length ? `<div class="fm-item" onclick="closeCtxMenu();openDayView(${dN},${dM})"><span class="fi">📋</span> View day (${dayItems.length})</div>` : ''}
+    <div class="fm-divider"></div>
+    <div class="fm-item" onclick="closeCtxMenu();goToday()"><span class="fi">📅</span> Jump to today</div>
+    <div class="fm-item" onclick="closeCtxMenu();openTableView()"><span class="fi">📋</span> All Content table</div>`, event);
+}
+
+function openAppCtxMenu(event) {
+  showCtxMenu(`
+    <div class="fm-item" onclick="closeCtxMenu();addInlineItem()"><span class="fi">➕</span> New item</div>
+    <div class="fm-item" onclick="closeCtxMenu();openTableView()"><span class="fi">📋</span> All Content table</div>
+    <div class="fm-divider"></div>
+    <div class="fm-item" onclick="closeCtxMenu();goToday()"><span class="fi">📅</span> Jump to today</div>
+    <div class="fm-item" onclick="closeCtxMenu();openPublishedPopup()"><span class="fi">✅</span> Published check</div>
+    <div class="fm-divider"></div>
+    <div class="fm-item" onclick="closeCtxMenu();openSettings()"><span class="fi">⚙️</span> Settings</div>`, event);
+}
+
+document.addEventListener('contextmenu', e => {
+  if (isEditableTarget(e.target)) return;   // let the browser handle copy/paste menus
+  e.preventDefault();
+
+  // an item — card, calendar chip, week-view chip, or table row
+  const card = e.target.closest('.item-card[data-id], .cal-item-chip[data-id]');
+  if (card) { openCtxMenu(e, Number(card.dataset.id)); return; }
+  const row = e.target.closest('tr[data-tv-id]');
+  if (row) { openCtxMenu(e, Number(row.dataset.tvId)); return; }
+
+  // a calendar day cell
+  const cell = e.target.closest('.cal-cell[data-d]');
+  if (cell) { openCellCtxMenu(e, Number(cell.dataset.d), Number(cell.dataset.m)); return; }
+
+  openAppCtxMenu(e);
+});
+
+// ══════════ CHECKLIST ══════════
+// Edited against a working copy while the modal is open; written back on save.
+let _modalChecklist = [];
+let _modalChkOnCard = false;
+
+function checklistStats(item) {
+  const list = item?.checklist || [];
+  const done = list.filter(c => c.done).length;
+  const overdue = list.some(c => !c.done && c.due && new Date(c.due + 'T00:00:00') < TODAY);
+  return { total: list.length, done, overdue };
+}
+
+function renderChecklist() {
+  const wrap = document.getElementById('chkList');
+  if (!wrap) return;
+  wrap.innerHTML = _modalChecklist.length
+    ? _modalChecklist.map((c, i) => {
+        const overdue = !c.done && c.due && new Date(c.due + 'T00:00:00') < TODAY;
+        return `<div class="chk-row">
+          <div class="chk-box${c.done?' on':''}" onclick="toggleChecklistItem(${i})">${c.done?'✓':''}</div>
+          <input class="chk-text${c.done?' done':''}" value="${escAttr(c.text)}" placeholder="Subtask…"
+                 onchange="editChecklistText(${i},this.value)" onkeydown="onChecklistKey(event,${i})">
+          <input type="date" class="chk-due${overdue?' overdue':''}" value="${c.due||''}"
+                 title="Optional due date" onchange="editChecklistDue(${i},this.value)">
+          <button type="button" class="chk-del" onclick="removeChecklistItem(${i})">✕</button>
+        </div>`;
+      }).join('')
+    : `<div class="chk-empty">No subtasks yet.</div>`;
+  const done = _modalChecklist.filter(c => c.done).length;
+  document.getElementById('chkCount').textContent =
+    _modalChecklist.length ? `${done}/${_modalChecklist.length} done` : '';
+}
+function addChecklistItem() {
+  _modalChecklist.push({ id: Date.now() + Math.floor(performance.now()), text: '', done: false, due: '' });
+  renderChecklist();
+  const rows = document.querySelectorAll('#chkList .chk-text');
+  const last = rows[rows.length - 1];
+  if (last) last.focus();
+}
+function toggleChecklistItem(i) { _modalChecklist[i].done = !_modalChecklist[i].done; renderChecklist(); }
+function editChecklistText(i, v) { _modalChecklist[i].text = v; }
+function editChecklistDue(i, v)  { _modalChecklist[i].due  = v; renderChecklist(); }
+function removeChecklistItem(i)  { _modalChecklist.splice(i, 1); renderChecklist(); }
+function setChecklistOnCard(on)  { _modalChkOnCard = on; }
+// Enter inside a subtask adds the next one instead of saving the whole item
+function onChecklistKey(e, i) {
+  if (e.key === 'Enter') {
+    e.preventDefault(); e.stopPropagation();
+    _modalChecklist[i].text = e.target.value;
+    if (i === _modalChecklist.length - 1) addChecklistItem();
+    else document.querySelectorAll('#chkList .chk-text')[i+1]?.focus();
+  }
+}
+// Pull the live DOM values before persisting (inputs may not have fired change yet)
+function collectChecklist() {
+  document.querySelectorAll('#chkList .chk-row').forEach((row, i) => {
+    if (!_modalChecklist[i]) return;
+    _modalChecklist[i].text = row.querySelector('.chk-text').value;
+    _modalChecklist[i].due  = row.querySelector('.chk-due').value;
+  });
+  return _modalChecklist.filter(c => (c.text || '').trim()).map(c => ({ ...c, text: c.text.trim() }));
+}
+
+// ══════════ TIME PICKER ══════════
+// Replaces the native <input type=time>, which fought with the modal's
+// Enter-to-save handler. Enter here commits the time and closes ONLY the popup.
+let _timeInput = null;   // the input currently bound to #timePop
+let _timeCommit = null;  // optional callback(value) fired on commit
+
+const TIME_STEPS = (() => {
+  const out = [];
+  for (let h = 0; h < 24; h++) for (const m of [0,15,30,45])
+    out.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+  return out;
+})();
+
+// Accepts 9, 930, 9:3, 18.00, 1800 … → HH:MM (or '' when unparseable)
+function normalizeTime(v) {
+  const raw = String(v ?? '').trim();
+  if (!raw) return '';
+  const digits = raw.replace(/[^0-9]/g, '');
+  let h, m;
+  if (/[:.]/.test(raw)) {
+    const [a, b] = raw.split(/[:.]/);
+    h = parseInt(a, 10); m = parseInt(b || '0', 10);
+  } else if (digits.length <= 2) { h = parseInt(digits, 10); m = 0; }
+  else if (digits.length === 3) { h = parseInt(digits.slice(0,1),10); m = parseInt(digits.slice(1),10); }
+  else { h = parseInt(digits.slice(0,2),10); m = parseInt(digits.slice(2,4),10); }
+  if (isNaN(h) || isNaN(m) || h > 23 || m > 59) return '';
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+
+function openTimePop(inp, commit) {
+  _timeInput = inp; _timeCommit = commit || null;
+  const pop = document.getElementById('timePop');
+  pop.classList.add('open');
+  const r = inp.getBoundingClientRect();
+  pop.style.left = Math.min(r.left, window.innerWidth - 148) + 'px';
+  const below = window.innerHeight - r.bottom;
+  if (below < 250 && r.top > 250) { pop.style.top = ''; pop.style.bottom = (window.innerHeight - r.top + 4) + 'px'; }
+  else { pop.style.bottom = ''; pop.style.top = (r.bottom + 4) + 'px'; }
+  renderTimePop('');
+  const cur = pop.querySelector('.tp-opt.cur') || pop.querySelector('.tp-opt');
+  if (cur) cur.scrollIntoView({ block:'center' });
+}
+function toggleTimePop(inp) {
+  const pop = document.getElementById('timePop');
+  if (pop.classList.contains('open') && _timeInput === inp) closeTimePop();
+  else { inp.focus(); openTimePop(inp, _timeCommit); }
+}
+function closeTimePop() {
+  document.getElementById('timePop').classList.remove('open');
+  _timeInput = null; _timeCommit = null;
+}
+function renderTimePop(filter) {
+  const pop = document.getElementById('timePop');
+  const cur = normalizeTime(_timeInput?.value);
+  const q = String(filter ?? '').replace(/[^0-9:]/g, '');
+  const list = q ? TIME_STEPS.filter(t => t.replace(':','').startsWith(q.replace(':',''))) : TIME_STEPS;
+  pop.innerHTML = list.length
+    ? list.map(t => `<div class="tp-opt${t===cur?' cur':''}" onmousedown="event.preventDefault();pickTime('${t}')">${t}</div>`).join('')
+    : `<div class="tp-empty">Enter to use “${normalizeTime(q)||q}”</div>`;
+}
+function filterTimePop(inp) {
+  _timeInput = inp;
+  if (!document.getElementById('timePop').classList.contains('open')) openTimePop(inp, _timeCommit);
+  else renderTimePop(inp.value);
+}
+function pickTime(t) {
+  if (!_timeInput) return;
+  const inp = _timeInput, cb = _timeCommit;
+  inp.value = t;
+  closeTimePop();
+  if (cb) cb(t); else inp.dispatchEvent(new Event('change', { bubbles:true }));
+}
+// Enter commits + closes the popup only — never bubbles to the modal's save handler
+function onTimeKey(e, inp) {
+  if (e.key === 'Enter') {
+    e.preventDefault(); e.stopPropagation();
+    const pop = document.getElementById('timePop');
+    const hot = pop.querySelector('.tp-opt.hot');
+    const val = hot ? hot.textContent.trim() : (normalizeTime(inp.value) || inp.value);
+    _timeInput = inp;
+    pickTime(normalizeTime(val) || '');
+    inp.blur();
+    return;
+  }
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeTimePop(); inp.blur(); return; }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const pop = document.getElementById('timePop');
+    if (!pop.classList.contains('open')) { openTimePop(inp, _timeCommit); return; }
+    const opts = [...pop.querySelectorAll('.tp-opt')];
+    if (!opts.length) return;
+    let idx = opts.findIndex(o => o.classList.contains('hot'));
+    if (idx < 0) idx = opts.findIndex(o => o.classList.contains('cur'));
+    idx = e.key === 'ArrowDown' ? Math.min(idx+1, opts.length-1) : Math.max(idx-1, 0);
+    opts.forEach(o => o.classList.remove('hot'));
+    opts[idx].classList.add('hot');
+    opts[idx].scrollIntoView({ block:'nearest' });
+  }
+}
+// Blur without Enter still normalises whatever was typed
+function commitTimeOnBlur(inp) {
+  const n = normalizeTime(inp.value);
+  if (n && n !== inp.value) inp.value = n;
+}
+
 // ══════════ FULL-SCREEN TABLE VIEW ══════════
 let tableOpen      = false;
 let tableShowDone  = false;
@@ -3318,7 +3654,12 @@ function renderTableView() {
         <input type="date" class="tv-date-in" value="${dateVal}" onchange="tvEditDate(${i.id},this.value)">
         <button class="tv-cal-btn" title="Pick on a calendar" onclick="openTvPicker(${i.id})">📅</button>
       </div></td>
-      <td><input type="time" class="tv-in" value="${i.time||''}" onchange="tvEdit(${i.id},'time',this.value)"></td>
+      <td><input class="tv-in" value="${i.time||''}" placeholder="HH:MM" autocomplete="off"
+            onfocus="openTimePop(this,v=>tvEdit(${i.id},'time',v))"
+            oninput="filterTimePop(this)"
+            onkeydown="onTimeKey(event,this)"
+            onblur="commitTimeOnBlur(this)"
+            onchange="tvEdit(${i.id},'time',normalizeTime(this.value))"></td>
       <td><select class="tv-sel-in" onchange="tvEdit(${i.id},'section',this.value)">${sel(i.section,SECS)}</select></td>
       <td><input class="tv-in" value="${escAttr(i.caption)}"   placeholder="—" onchange="tvEdit(${i.id},'caption',this.value)"></td>
       <td><input class="tv-in" value="${escAttr(i.hashtags)}"  placeholder="—" onchange="tvEdit(${i.id},'hashtags',this.value)"></td>
@@ -3568,6 +3909,9 @@ document.getElementById('itemModal')?.addEventListener('keydown', e => {
   if (t !== 'purple') document.documentElement.setAttribute('data-theme', t);
 })();
 document.addEventListener('click', e => {
+  const tp = document.getElementById('timePop');
+  if (tp && !tp.contains(e.target) && e.target !== _timeInput
+      && !e.target.classList?.contains('time-clock-btn')) closeTimePop();
   ['sortDropMenu','filterDropMenu','rangeDropMenu','ctxMenu','quickDrop'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('open');
