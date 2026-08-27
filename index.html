@@ -4665,15 +4665,28 @@ document.addEventListener('click', e => {
   hideDayHover();
 });
 
-// ══ MOBILE UA DETECTION ══
-(function() {
+// ══ MOBILE DETECTION ══
+// Re-evaluated on resize so DevTools emulation, foldables, and rotations
+// switch live instead of requiring a reload.
+function mbDetect() {
   const ua = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
   const touch = window.matchMedia('(pointer:coarse)').matches && window.innerWidth < 900;
-  if (ua || touch) {
-    document.body.classList.add('mobile-device');
-    mbGo('today');
-  }
-})();
+  const want = ua || touch;
+  if (want === document.body.classList.contains('mobile-device')) return;
+  document.body.classList.toggle('mobile-device', want);
+  if (want) mbGo('today');
+  if (currentUser) updateAll();   // re-render whichever layout is now active
+}
+mbDetect();
+let _mbDetectT = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_mbDetectT);
+  _mbDetectT = setTimeout(mbDetect, 150);
+});
+window.addEventListener('orientationchange', mbDetect);
+// pointer-type flips (DevTools device emulation, convertible laptops) don't
+// always fire resize — the media query change event is the reliable signal
+try { matchMedia('(pointer:coarse)').addEventListener('change', mbDetect); } catch(e) {}
 </script>
 </body>
 </html>
