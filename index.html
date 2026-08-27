@@ -1186,18 +1186,22 @@
     .mbm-dow { text-align: center; font-size: 9.5px; font-weight: 800; letter-spacing: 1px; color: var(--text-faint); }
     .mbm-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
     .mbm-cell {
-      min-height: 46px; border-radius: 10px; border: 1px solid transparent; cursor: pointer;
-      display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 1px 3px;
-      background: none; font-family: inherit; color: var(--text);
+      min-height: 64px; border-radius: 8px; border: 1px solid transparent; cursor: pointer;
+      display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 3px 2px 2px;
+      background: none; font-family: inherit; color: var(--text); overflow: hidden; min-width: 0;
     }
-    .mbm-cell .n { font-size: 13.5px; font-weight: 700; line-height: 1;
-      width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .mbm-cell .n { font-size: 12.5px; font-weight: 700; line-height: 1; align-self: center; flex-shrink: 0;
+      width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
     .mbm-cell.other .n { color: var(--text-faint); }
     .mbm-cell.today .n { background: var(--red); color: #fff; }
     .mbm-cell.sel { background: var(--accent-dim); border-color: var(--accent); }
-    .mbm-dots { display: flex; gap: 2.5px; height: 5px; align-items: center; }
-    .mbm-dot { width: 4.5px; height: 4.5px; border-radius: 50%; }
-    .mbm-holbar { width: 14px; height: 3px; border-radius: 2px; background: var(--blue); }
+    /* GCal-style event lines: tiny colored bars carrying the title */
+    .mbm-ev {
+      font-size: 7.5px; font-weight: 700; line-height: 1.5; padding: 0 3px; border-radius: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; min-width: 0;
+    }
+    .mbm-ev.hol { background: #3b82f62e; color: var(--blue); direction: rtl; text-align: right; }
+    .mbm-more { font-size: 7px; font-weight: 700; color: var(--text-faint); padding: 0 3px; text-align: left; }
 
     /* ── bottom sheet (item preview + quick-move) ── */
     #mbSheet {
@@ -4368,7 +4372,7 @@ function renderMbMonth() {
   const cells = Math.ceil((last.getDate() + first.getDay()) / 7) * 7;
 
   const dotFor = st => st === 'published' ? 'var(--green)' : st === 'missed' ? 'var(--red)'
-    : st === 'waiting' ? 'var(--yellow)' : st === 'ready' ? 'var(--accent)' : 'var(--text-faint)';
+    : st === 'waiting' ? 'var(--yellow)' : st === 'ready' ? 'var(--accent)' : 'var(--text-dim)';
 
   let grid = '';
   for (let i = 0; i < cells; i++) {
@@ -4377,14 +4381,22 @@ function renderMbMonth() {
     const other   = d.getMonth() !== m.getMonth();
     const isToday = d.getTime() === TODAY.getTime();
     const isSel   = mbSelDay.d === dN && mbSelDay.m === dM;
-    const items = ITEMS.filter(x => (x.section === 'content' || x.section === 'archive') && x.day === dN && x.month === dM);
+    const items = ITEMS.filter(x => (x.section === 'content' || x.section === 'archive') && x.day === dN && x.month === dM)
+      .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
     const hol = getHolidays(d);
-    const dots = items.slice(0, 3).map(x => `<span class="mbm-dot" style="background:${dotFor(x.status)}"></span>`).join('');
+    // GCal-style: holiday line first, then up to 2 event lines with titles, then +N
+    const lineBudget = hol.length ? 1 : 2;
+    const shown = items.slice(0, lineBudget);
+    const extra = items.length - shown.length;
+    const evs =
+      (hol.length ? `<span class="mbm-ev hol">${hol[0].name}</span>` : '') +
+      shown.map(x => { const c = dotFor(x.status);
+        return `<span class="mbm-ev" style="background:color-mix(in srgb, ${c} 22%, transparent);color:${c}">${x.title}</span>`;
+      }).join('') +
+      (extra > 0 ? `<span class="mbm-more">+${extra}</span>` : '');
     grid += `<button class="mbm-cell${other ? ' other' : ''}${isToday ? ' today' : ''}${isSel ? ' sel' : ''}"
         onclick="mbSelectDay(${dN},${dM})">
-      <span class="n mb-num">${dN}</span>
-      <span class="mbm-dots">${dots}</span>
-      ${hol.length ? '<span class="mbm-holbar"></span>' : ''}
+      <span class="n mb-num">${dN}</span>${evs}
     </button>`;
   }
 
