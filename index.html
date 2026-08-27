@@ -1007,6 +1007,7 @@
       padding: 0 14px 18px; display: none; flex-direction: column; gap: 12px;
     }
     .mb-screen.on { display: flex; }
+    .mb-screen > * { flex-shrink: 0; }   /* children scroll, never squash */
     .mb-screen::-webkit-scrollbar { width: 0; }
 
     .mb-slab {
@@ -1074,38 +1075,30 @@
     }
     .mb-pub.done { background: var(--green); border-color: var(--green); color: #fff; pointer-events: none; }
 
-    /* week: horizontal day boxes, swipe sideways */
-    .mb-wk-row {
-      display: flex; gap: 8px; overflow-x: auto; flex: 1; min-height: 0;
-      padding-bottom: 6px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+    /* week: all 7 columns on one screen, GCal-style */
+    .mb-wk-row { display: flex; gap: 3px; flex: 1; min-height: 0; }
+    .mb-wk-col {
+      flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 4px 2px 3px;
     }
-    .mb-wk-row::-webkit-scrollbar { height: 0; }
-    .mb-wk-box {
-      flex: 0 0 150px; min-width: 0; display: flex; flex-direction: column; gap: 7px;
-      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-      padding: 10px 9px; scroll-snap-align: start;
-    }
-    .mb-wk-box.today { border-color: var(--red); background: #ef44440a; }
-    .mb-wk-head { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 0 2px; }
-    .mb-wk-head .dow { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--text-faint); }
+    .mb-wk-col.today { border-color: var(--red); background: #ef44440a; }
+    .mb-wk-head { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; padding: 2px 0 1px; }
+    .mb-wk-head .dow { font-size: 8.5px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-faint); }
     .mb-wk-head .n {
-      margin-left: auto; width: 27px; height: 27px; border-radius: 9px; display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 800; background: var(--surface); border: 1px solid var(--border);
+      width: 23px; height: 23px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 12.5px; font-weight: 800;
     }
-    .mb-wk-box.today .mb-wk-head .dow { color: var(--red); }
-    .mb-wk-box.today .mb-wk-head .n { background: var(--red); border-color: var(--red); color: #fff; }
-    .mb-wk-items { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+    .mb-wk-col.today .mb-wk-head .dow { color: var(--red); }
+    .mb-wk-col.today .mb-wk-head .n { background: var(--red); color: #fff; }
+    .mb-wk-items { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 3px; overflow-y: auto; padding: 0 1px; }
     .mb-wk-items::-webkit-scrollbar { width: 0; }
-    .mb-wk-chip {
-      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
-      padding: 7px 9px; cursor: pointer; flex-shrink: 0;
-    }
-    .mb-wk-chip .r { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: var(--text-dim); }
-    .mb-wk-chip .r .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .mb-wk-chip { border-radius: 5px; padding: 3px 4px; cursor: pointer; flex-shrink: 0; min-width: 0; }
+    .mb-wk-chip .r { font-size: 7.5px; font-weight: 700; opacity: 0.8; line-height: 1.2; }
     .mb-wk-chip .t {
-      font-size: 12.5px; font-weight: 600; line-height: 1.35; margin-top: 3px;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;
+      font-size: 8.5px; font-weight: 700; line-height: 1.3; word-break: break-word;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
     }
+    .mb-wk-hol { font-size: 7.5px; font-weight: 700; color: var(--blue); background: #3b82f62e; border-radius: 4px; padding: 1px 3px; direction: rtl; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
     .mb-mini {
       display: flex; align-items: center; gap: 8px; background: var(--card);
       border: 1px solid var(--border); border-radius: 11px; padding: 8px 11px; cursor: pointer;
@@ -1193,7 +1186,9 @@
     body.mobile-device .modal { width: 100%; max-width: none; max-height: none; height: 100dvh; border-radius: 0; }
     body.mobile-device .modal-header { padding: 14px 16px 12px; }
     body.mobile-device .modal-body { padding: 16px; gap: 16px; }
-    body.mobile-device .modal-footer { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); flex-wrap: wrap; }
+    body.mobile-device .modal-footer { padding: 12px 10px calc(12px + env(safe-area-inset-bottom, 0px)); flex-wrap: nowrap; gap: 7px; }
+    body.mobile-device .modal-footer .btn { flex: 1; padding: 11px 6px; font-size: 14.5px; white-space: nowrap; }
+    body.mobile-device .modal-footer .btn-danger { margin-right: 0; }
     body.mobile-device .row-fields { grid-template-columns: 1fr; }
     body.mobile-device .drive-preview { height: 160px; }
     body.mobile-device #tableView { display: none !important; }
@@ -4218,7 +4213,6 @@ function mbGo(name) {
     el.classList.toggle('on', el.id === 'mb' + name[0].toUpperCase() + name.slice(1)));
   document.querySelectorAll('.mb-tab').forEach(t => t.classList.toggle('on', t.dataset.s === name));
   if (name === 'add') renderMbAdd();
-  if (name === 'week') mbWkScrollToToday();
   const sc = document.getElementById('mb' + name[0].toUpperCase() + name.slice(1));
   if (sc) sc.scrollTop = 0;
 }
@@ -4354,7 +4348,7 @@ function renderMbWeek() {
   const f = d => `${d.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}`;
   const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-  let boxes = '';
+  let cols = '';
   for (let i = 0; i < 7; i++) {
     const d = new Date(base); d.setDate(base.getDate() + i);
     const dN = d.getDate(), dM = d.getMonth() + 1;
@@ -4363,17 +4357,18 @@ function renderMbWeek() {
       .sort((a,b) => (a.time||'99:99').localeCompare(b.time||'99:99'));
     const hol = getHolidays(d);
     const dotFor = st => st==='published' ? 'var(--green)' : st==='missed' ? 'var(--red)'
-      : st==='waiting' ? 'var(--yellow)' : st==='ready' ? 'var(--accent)' : 'var(--text-faint)';
+      : st==='waiting' ? 'var(--yellow)' : st==='ready' ? 'var(--accent)' : 'var(--text-dim)';
 
-    boxes += `<div class="mb-wk-box${isToday?' today':''}">
+    cols += `<div class="mb-wk-col${isToday?' today':''}">
       <div class="mb-wk-head"><span class="dow">${DOW[i]}</span><span class="n mb-num">${dN}</span></div>
-      <div class="mb-wk-items">
-        ${hol.length ? `<div class="mb-hol ${hol[0].cal}">${hol.map(h=>h.name).join(' · ')}</div>` : ''}
-        ${items.map(x => `<div class="mb-wk-chip" onclick="openMbItemSheet(${x.id})">
-            <div class="r"><span class="dot" style="background:${dotFor(x.status)}"></span><span class="mb-num">${x.time||'—'}</span></div>
-            <div class="t">${x.starred?'⭐ ':''}${x.title}</div>
-          </div>`).join('')}
-        <div class="mb-empty-day" onclick="mbAddOn(${dN},${dM})">+ Add</div>
+      <div class="mb-wk-items" onclick="if(event.target===this)mbAddOn(${dN},${dM})">
+        ${hol.length ? `<div class="mb-wk-hol" title="${hol.map(h=>h.name).join(' · ')}">${hol[0].name}</div>` : ''}
+        ${items.map(x => { const c = dotFor(x.status);
+          return `<div class="mb-wk-chip" style="background:color-mix(in srgb, ${c} 20%, transparent);color:${c}"
+              onclick="openMbItemSheet(${x.id})">
+            <div class="r mb-num">${x.time||''}</div>
+            <div class="t">${x.starred?'⭐':''}${x.title}</div>
+          </div>`; }).join('')}
       </div>
     </div>`;
   }
@@ -4386,17 +4381,7 @@ function renderMbWeek() {
         <button class="mb-nav-btn" onclick="mbShiftWeek(1)">›</button>
       </span>
     </div>
-    <div class="mb-wk-row" id="mbWkRow">${boxes}</div>`;
-
-  mbWkScrollToToday();
-}
-// Land on today's box when viewing the current week. Needs the tab to be
-// visible — offsets are 0 while display:none — so mbGo calls it again on open.
-function mbWkScrollToToday() {
-  if (mbWeekOffset !== 0) return;
-  const row = document.getElementById('mbWkRow');
-  const tb = row?.querySelector('.mb-wk-box.today');
-  if (row && tb && row.clientWidth > 0) row.scrollLeft = Math.max(0, tb.offsetLeft - row.offsetLeft - 8);
+    <div class="mb-wk-row">${cols}</div>`;
 }
 function mbShiftWeek(d) { mbWeekOffset += d; renderMbWeek(); }
 function mbThisWeek()   { mbWeekOffset = 0;  renderMbWeek(); }
@@ -4726,16 +4711,31 @@ document.addEventListener('click', e => {
 // ══ MOBILE DETECTION ══
 // Re-evaluated on resize so DevTools emulation, foldables, and rotations
 // switch live instead of requiring a reload.
+function mbOrderModalFooter(mobile) {
+  const f = document.querySelector('#modalOverlay .modal-footer');
+  if (!f) return;
+  const save = f.querySelector('.btn-primary'), del = f.querySelector('.btn-danger');
+  if (!save || !del) return;
+  if (mobile) {          // Save, Delete, Copy, Cancel
+    f.insertBefore(save, f.firstElementChild);
+    f.insertBefore(del, save.nextElementSibling);
+  } else {               // Delete, Copy, Cancel, Save (original)
+    f.insertBefore(del, f.firstElementChild);
+    f.appendChild(save);
+  }
+}
 function mbDetect() {
   const ua = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
   const touch = window.matchMedia('(pointer:coarse)').matches && window.innerWidth < 900;
   const want = ua || touch;
   if (want === document.body.classList.contains('mobile-device')) return;
   document.body.classList.toggle('mobile-device', want);
+  mbOrderModalFooter(want);
   if (want) mbGo('today');
   if (currentUser) updateAll();   // re-render whichever layout is now active
 }
 mbDetect();
+mbOrderModalFooter(document.body.classList.contains('mobile-device'));
 let _mbDetectT = null;
 window.addEventListener('resize', () => {
   clearTimeout(_mbDetectT);
