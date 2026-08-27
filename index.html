@@ -976,55 +976,206 @@
     }
     .cal-hol-jewish  { background: #3b82f61e; color: var(--blue); }
     .cal-hol-israeli { background: #10b9811e; color: var(--green); }
-    .wv-holiday {
-      font-size: 8px; font-weight: 700; padding: 0 3px; border-radius: 3px;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      direction: rtl; text-align: center; margin-bottom: 2px; flex-shrink: 0;
-    }
     .cal-sub-row { display: flex; align-items: center; gap: 10px; padding: 10px 13px; background: var(--card); border: 1px solid var(--border); border-radius: 11px; margin-bottom: 8px; }
     .cal-sub-dot { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
     .cal-sub-lbl { flex: 1; font-size: 14px; font-weight: 600; }
 
-    /* ══ MOBILE WEEK VIEW ══ */
-    #weekViewPanel { display: none; flex-direction: column; flex: 1; overflow: hidden; background: var(--bg); }
-    .wv-header { display: flex; align-items: center; gap: 7px; padding: 8px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .wv-cols   { display: flex; flex: 1; overflow-y: auto; }
-    .wv-col    { flex: 1; border-right: 1px solid var(--border); display: flex; flex-direction: column; min-width: 0; }
-    .wv-col:last-child { border-right: none; }
-    .wv-col-head { text-align: center; padding: 5px 2px; font-size: 10px; font-weight: 700; color: var(--text-dim); border-bottom: 1px solid var(--border); flex-shrink: 0; line-height: 1.3; }
-    .wv-col-head.wv-today { color: var(--red); }
-    .wv-col-body { flex: 1; padding: 3px 2px; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
-    .wv-chip { border-radius: 4px; padding: 2px 4px; font-size: 9.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; line-height: 1.4; }
-    .wv-chip:hover { opacity: 0.8; }
-    .wv-more { font-size: 9px; color: var(--text-dim); text-align: center; padding: 1px 0; cursor: pointer; }
-    .wv-full-btn { padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; font-family: inherit; white-space: nowrap; }
-    .wv-full-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
-    .wv-nav-btn { padding: 2px 8px; border-radius: 6px; font-size: 16px; font-weight: 700; border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; font-family: inherit; line-height: 1.4; flex-shrink: 0; }
-    .wv-nav-btn:active { background: var(--card); }
-    .wv-date-label { flex: 1; font-size: 10px; font-weight: 700; color: var(--text-dim); text-align: center; }
-    .wv-col-head.wv-missed { color: var(--red); }
-    .wv-col.wv-today-col { background: #ef444408; }
-    .wv-empty-hint { font-size: 9px; color: var(--text-faint); text-align: center; padding-top: 6px; }
-    /* Mobile device layout (UA-detected, applied via JS) */
-    .mobile-view-toggle { display: none; }
+    /* ══════════ MOBILE APP (UA-detected, applied via JS) ══════════ */
+    #mobileApp { display: none; }
     body.mobile-device { overflow: hidden; }
-    body.mobile-device #app { height: 100dvh; flex-direction: column; overflow: hidden; }
-    body.mobile-device .topbar { height: auto; padding: 8px 12px; flex-wrap: wrap; gap: 6px; }
-    body.mobile-device .stats-row { display: none; }
-    body.mobile-device .divider-v { display: none; }
-    body.mobile-device .main { flex-direction: row; flex: 1; overflow: hidden; }
-    body.mobile-device .left-panel { width: 50%; flex-shrink: 0; border-right: 1px solid var(--border); overflow: hidden; }
-    body.mobile-device .left-panel .items-list { height: calc(100% - 44px); }
-    body.mobile-device .right-panel { width: 50%; display: flex; overflow: hidden; }
-    body.mobile-device #weekViewPanel { display: flex; }
-    body.mobile-device .calendar-header { display: none; }
-    body.mobile-device #calWrapper { display: none; }
-    body.mobile-device #todayBarInline { display: none; }
-    /* Full calendar mode on mobile */
-    body.mobile-device.mob-fullcal #weekViewPanel { display: none; }
-    body.mobile-device.mob-fullcal .calendar-header { display: flex; }
-    body.mobile-device.mob-fullcal #calWrapper { display: flex; }
-    body.mobile-device.mob-fullcal .right-panel { flex-direction: column; }
+    body.mobile-device #app { display: none !important; }
+    body.mobile-device #mobileApp {
+      display: flex; flex-direction: column;
+      position: fixed; inset: 0; background: var(--bg); overflow: hidden;
+    }
+    .mb-num { font-variant-numeric: tabular-nums; }
+
+    .mb-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px 10px; flex-shrink: 0; }
+    .mb-brand { display: flex; flex-direction: column; line-height: 1.15; }
+    .mb-brand b { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; }
+    .mb-brand span { font-size: 9.5px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--accent); }
+    .mb-head-btn {
+      width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+      background: var(--card); border: 1px solid var(--border); color: var(--text-dim);
+      font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .mb-head-btn.first { margin-left: auto; }
+
+    .mb-screens { flex: 1; position: relative; overflow: hidden; }
+    .mb-screen {
+      position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 0 14px 18px; display: none; flex-direction: column; gap: 12px;
+    }
+    .mb-screen.on { display: flex; }
+    .mb-screen::-webkit-scrollbar { width: 0; }
+
+    .mb-slab {
+      display: flex; align-items: baseline; gap: 8px; padding: 3px 2px 0;
+      font-size: 10.5px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; color: var(--text-faint);
+    }
+    .mb-slab .c { color: var(--accent); letter-spacing: 0; }
+    .mb-slab .nav { margin-left: auto; display: flex; gap: 5px; }
+    .mb-nav-btn {
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text-dim); font-size: 13px; font-family: inherit; font-weight: 700;
+      cursor: pointer; padding: 3px 10px; letter-spacing: 0;
+    }
+    .mb-nav-btn:active { border-color: var(--accent); color: var(--accent); }
+
+    .mb-hero {
+      background: var(--card); border: 1px solid var(--border); border-radius: 17px;
+      padding: 15px 16px; display: flex; align-items: center; gap: 15px;
+    }
+    .mb-hero-date { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; line-height: 1; }
+    .mb-hero-date .d { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
+    .mb-hero-date .m { font-size: 10.5px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim); margin-top: 4px; }
+    .mb-hero-rule { width: 1px; align-self: stretch; background: var(--border-light); }
+    .mb-hero-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .mb-hero-txt b { font-size: 15.5px; font-weight: 700; }
+    .mb-hero-txt span { font-size: 13px; color: var(--text-dim); line-height: 1.45; }
+
+    .mb-alert {
+      display: flex; align-items: center; gap: 11px; cursor: pointer;
+      background: #ef444414; border: 1px solid #ef44445c; border-radius: 14px; padding: 12px 14px;
+    }
+    .mb-alert-n {
+      width: 27px; height: 27px; border-radius: 9px; background: var(--red); color: #fff;
+      font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .mb-alert-t { flex: 1; font-size: 13.5px; font-weight: 600; line-height: 1.4; min-width: 0; }
+    .mb-alert-t small { display: block; font-size: 11.5px; font-weight: 400; color: var(--text-dim); margin-top: 1px; }
+    .mb-alert-go { color: var(--red); font-size: 17px; flex-shrink: 0; }
+
+    .mb-item {
+      display: flex; gap: 12px; background: var(--card); border: 1px solid var(--border);
+      border-radius: 15px; padding: 12px 13px; position: relative; overflow: hidden;
+    }
+    .mb-item::before { content: ''; position: absolute; left: 0; top: 11px; bottom: 11px; width: 3px; border-radius: 0 3px 3px 0; background: var(--green); }
+    .mb-item.unsched::before { background: var(--red); }
+    .mb-item.done { opacity: 0.5; }
+    .mb-item-time { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; padding-left: 5px; min-width: 44px; }
+    .mb-item-time .t { font-size: 14px; font-weight: 700; }
+    .mb-item-time .tt { font-size: 9.5px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-faint); }
+    .mb-item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+    .mb-item-title { font-size: 14.5px; font-weight: 600; line-height: 1.35; word-break: break-word; }
+    .mb-item-meta { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+    .mb-chip {
+      font-size: 10.5px; font-weight: 700; padding: 2.5px 8px; border-radius: 6px;
+      border: 1px solid var(--border-light); color: var(--text-dim); white-space: nowrap;
+    }
+    .mb-chip.s-ready     { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+    .mb-chip.s-waiting   { background: #f59e0b18; color: var(--yellow); border-color: #f59e0b66; }
+    .mb-chip.s-published { background: #10b98118; color: var(--green);  border-color: #10b98166; }
+    .mb-chip.s-missed    { background: #ef444418; color: var(--red);    border-color: #ef444466; }
+    .mb-pub {
+      align-self: flex-start; padding: 7px 14px; border-radius: 9px; cursor: pointer;
+      background: #f59e0b18; border: 1px solid #f59e0b73; color: var(--yellow);
+      font-family: inherit; font-size: 12.5px; font-weight: 700;
+    }
+    .mb-pub.done { background: var(--green); border-color: var(--green); color: #fff; pointer-events: none; }
+
+    /* week agenda */
+    .mb-day { display: flex; gap: 12px; }
+    .mb-day-rail { display: flex; flex-direction: column; align-items: center; gap: 5px; flex-shrink: 0; width: 38px; }
+    .mb-day-dow { font-size: 9.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--text-faint); }
+    .mb-day-n {
+      width: 31px; height: 31px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      font-size: 14.5px; font-weight: 700; background: var(--card); border: 1px solid var(--border);
+    }
+    .mb-day.today .mb-day-n { background: var(--red); border-color: var(--red); color: #fff; }
+    .mb-day.today .mb-day-dow { color: var(--red); }
+    .mb-day-stack { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding-bottom: 5px; }
+    .mb-mini {
+      display: flex; align-items: center; gap: 8px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 11px; padding: 8px 11px; cursor: pointer;
+    }
+    .mb-mini .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .mb-mini .mt { font-size: 11px; font-weight: 700; color: var(--text-dim); flex-shrink: 0; min-width: 34px; }
+    .mb-mini .mn { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+    .mb-empty-day {
+      font-size: 12px; color: var(--text-faint); padding: 7px 11px;
+      border: 1px dashed var(--border-light); border-radius: 11px; cursor: pointer;
+    }
+    .mb-hol {
+      font-size: 11px; font-weight: 700; color: var(--blue); background: #3b82f618;
+      border: 1px solid #3b82f652; border-radius: 8px; padding: 4px 9px; direction: rtl; text-align: right;
+    }
+    .mb-hol.israeli { color: var(--green); background: #10b98118; border-color: #10b98152; }
+
+    /* search + filters */
+    .mb-search {
+      display: flex; align-items: center; gap: 9px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 12px; padding: 10px 13px; flex-shrink: 0;
+    }
+    .mb-search span { color: var(--text-faint); font-size: 14px; }
+    .mb-search input {
+      flex: 1; background: transparent; border: none; outline: none; color: var(--text);
+      font-family: inherit; font-size: 16px; min-width: 0;
+    }
+    .mb-filters { display: flex; gap: 7px; overflow-x: auto; padding: 1px 1px 3px; flex-shrink: 0; }
+    .mb-filters::-webkit-scrollbar { height: 0; }
+    .mb-fchip {
+      font-size: 12px; font-weight: 700; padding: 6px 13px; border-radius: 20px; white-space: nowrap;
+      cursor: pointer; background: var(--card); border: 1px solid var(--border);
+      color: var(--text-dim); font-family: inherit;
+    }
+    .mb-fchip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* quick add */
+    .mb-field { display: flex; flex-direction: column; gap: 7px; }
+    .mb-field-l { font-size: 10.5px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; color: var(--text-faint); }
+    .mb-in {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 13px;
+      color: var(--text); font-family: inherit; font-size: 16px; outline: none; width: 100%;
+    }
+    .mb-in:focus { border-color: var(--accent); }
+    .mb-opts { display: flex; gap: 7px; flex-wrap: wrap; }
+    .mb-opt {
+      font-size: 12.5px; font-weight: 700; padding: 8px 14px; border-radius: 10px; cursor: pointer;
+      background: var(--card); border: 1px solid var(--border); color: var(--text-dim); font-family: inherit;
+    }
+    .mb-opt.on { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .mb-savebar { display: flex; gap: 9px; margin-top: 3px; }
+    .mb-save {
+      flex: 1; padding: 14px; border-radius: 13px; background: var(--accent); border: none; color: #fff;
+      font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer;
+    }
+    .mb-save.ghost { flex: 0 0 auto; background: var(--card); border: 1px solid var(--border); color: var(--text-dim); padding: 14px 18px; font-weight: 700; }
+
+    /* tab bar */
+    .mb-tabs {
+      display: flex; align-items: stretch; gap: 2px; flex-shrink: 0;
+      padding: 7px 10px calc(11px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid var(--border); background: var(--surface);
+    }
+    .mb-tab {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px;
+      background: none; border: none; cursor: pointer; color: var(--text-faint);
+      font-family: inherit; font-size: 10px; font-weight: 700; border-radius: 11px; position: relative;
+    }
+    .mb-tab .ic { font-size: 17px; line-height: 1; }
+    .mb-tab.on { color: var(--accent); }
+    .mb-tab .mb-badge {
+      position: absolute; top: 2px; right: calc(50% - 18px);
+      min-width: 16px; height: 16px; padding: 0 4px; border-radius: 9px; background: var(--red);
+      color: #fff; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+    }
+    .mb-tab.mb-add .ic {
+      width: 31px; height: 31px; border-radius: 11px; background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center; font-size: 21px; font-weight: 400;
+    }
+    .mb-empty { padding: 40px 16px; text-align: center; color: var(--text-faint); font-size: 14px; line-height: 1.6; }
+
+    /* the item modal goes full-screen on a phone */
+    body.mobile-device .modal-overlay { padding: 0; align-items: stretch; }
+    body.mobile-device .modal { width: 100%; max-width: none; max-height: none; height: 100dvh; border-radius: 0; }
+    body.mobile-device .modal-header { padding: 14px 16px 12px; }
+    body.mobile-device .modal-body { padding: 16px; gap: 16px; }
+    body.mobile-device .modal-footer { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); flex-wrap: wrap; }
+    body.mobile-device .row-fields { grid-template-columns: 1fr; }
+    body.mobile-device .drive-preview { height: 160px; }
+    body.mobile-device #tableView { display: none !important; }
+    body.mobile-device .field-input, body.mobile-device .modal-title-input { font-size: 16px; }
   </style>
 </head>
 <body>
@@ -1098,11 +1249,6 @@
   </div>
 </div>
 
-<!-- MOBILE TOGGLE -->
-<div class="mobile-view-toggle">
-  <button class="mob-tog-btn active" id="mobListBtn" onclick="setMobView('list')">📋 List</button>
-  <button class="mob-tog-btn" id="mobCalBtn"  onclick="setMobView('cal')">📅 Calendar</button>
-</div>
 
 <!-- MAIN -->
 <div class="main">
@@ -1187,20 +1333,36 @@
       <div class="calendar-grid" id="calendarGrid"></div>
     </div>
 
-    <!-- MOBILE WEEK VIEW PANEL -->
-    <div id="weekViewPanel">
-      <div class="wv-header">
-        <button class="wv-nav-btn" onclick="shiftWeekView(-1)">‹</button>
-        <button class="wv-nav-btn" onclick="shiftWeekView(1)">›</button>
-        <span class="wv-date-label" id="wvDateLabel"></span>
-        <button class="wv-full-btn" id="wvFullBtn" onclick="toggleFullCal()">📅 Month</button>
-      </div>
-      <div class="wv-cols" id="wvCols"></div>
-    </div>
   </div>
 
 </div><!-- /main -->
 </div><!-- /app -->
+
+<!-- ══════════ MOBILE APP ══════════ -->
+<div id="mobileApp">
+  <div class="mb-head">
+    <div class="mb-brand"><b>MarketGant</b><span>Fusion Culture</span></div>
+    <button class="mb-head-btn first" onclick="toggleTheme(!lightMode)" title="Light / dark">◐</button>
+    <button class="mb-head-btn" onclick="openSettings()" title="Settings">⚙</button>
+  </div>
+
+  <div class="mb-screens">
+    <div class="mb-screen on" id="mbToday"></div>
+    <div class="mb-screen" id="mbWeek"></div>
+    <div class="mb-screen" id="mbAll"></div>
+    <div class="mb-screen" id="mbAdd"></div>
+  </div>
+
+  <nav class="mb-tabs">
+    <button class="mb-tab on" data-s="today" onclick="mbGo('today')">
+      <span class="ic">◉</span>Today<span class="mb-badge" id="mbBadge" style="display:none"></span>
+    </button>
+    <button class="mb-tab" data-s="week" onclick="mbGo('week')"><span class="ic">▤</span>Week</button>
+    <button class="mb-tab mb-add" data-s="add" onclick="mbGo('add')"><span class="ic">+</span>Add</button>
+    <button class="mb-tab" data-s="all" onclick="mbGo('all')"><span class="ic">≡</span>All</button>
+  </nav>
+</div>
+
 
 <!-- ══ SETTINGS OVERLAY + PANEL ══ -->
 <div class="settings-overlay" id="settingsOverlay" onclick="closeSettings()"></div>
@@ -1332,10 +1494,6 @@
         <div class="chk-head">
           <div class="field-label">Checklist</div>
           <span class="chk-count" id="chkCount"></span>
-          <label class="chk-oncard">
-            <input type="checkbox" id="chkOnCard" onchange="setChecklistOnCard(this.checked)">
-            Show on card
-          </label>
         </div>
         <div class="chk-list" id="chkList"></div>
         <button type="button" class="chk-add" onclick="addChecklistItem()">+ Add subtask</button>
@@ -1775,7 +1933,6 @@ let _modalIsNew      = false; // true when modal was opened for a brand-new item
 let _pubPopupOpen    = false; // Published? popup currently showing (so drops can refresh it)
 let viewRange       = 'month';
 let viewOffset      = 0;
-let weekViewOffset  = 0; // mobile week panel offset (in weeks from current)
 let customViewStart = null;
 let customViewEnd   = null;
 let showingTrash    = false;
@@ -1906,10 +2063,6 @@ function renderCard(item) {
     ? `${String(item.day).padStart(2,'0')}.${String(item.month).padStart(2,'0')}${item.time ? ' · ' + item.time : ''}`
     : '';
   const isTrash = item.section === 'deleted';
-  const cs = checklistStats(item);
-  const chkChip = (item.showChecklist && cs.total)
-    ? `<span class="chk-chip${cs.done===cs.total?' done':(cs.overdue?' overdue':'')}">☑ ${cs.done}/${cs.total}</span>`
-    : '';
   // Scheduled stripe: only meaningful in Content (Backlog is unscheduled by design)
   const schedCls = item.section === 'content'
     ? (item.day && item.month ? ' sched-yes' : ' sched-no')
@@ -1935,7 +2088,6 @@ function renderCard(item) {
         <div class="item-meta">
           <span class="platform-tag" onclick="showQuickDrop(event,${item.id},'platform')">${PLAT_ICONS[item.platform]||'📌'} ${item.platform}</span>
           ${dateStr ? `<span class="scheduled-date${item.starred?' starred-date':''}">${dateStr}</span>` : ''}
-          ${chkChip}
         </div>
         <span class="status-badge s-${item.status}" onclick="showQuickDrop(event,${item.id},'status')">${STATUS_LABELS[item.status]||item.status}</span>
       </div>
@@ -2809,12 +2961,6 @@ function setTheme(id) {
   if (panel?.classList.contains('open') && currentSettingsTab === 'general') renderSettingsTab('general');
 }
 
-// ══ MOBILE VIEW TOGGLE ══
-function setMobView(v) {
-  document.body.classList.toggle('mob-cal-view', v === 'cal');
-  document.getElementById('mobListBtn').classList.toggle('active', v === 'list');
-  document.getElementById('mobCalBtn').classList.toggle('active', v === 'cal');
-}
 
 function onChipDragStart(event,id){
   event.stopPropagation(); dragItemId=id; dragSource='calendar';
@@ -3008,8 +3154,6 @@ function openModal(id) {
 
   // Checklist — deep-copy so Cancel doesn't leak edits back into the item
   _modalChecklist = (item?.checklist || []).map(c => ({ ...c }));
-  _modalChkOnCard = !!item?.showChecklist;
-  document.getElementById('chkOnCard').checked = _modalChkOnCard;
   renderChecklist();
 
   // Recurring UI
@@ -3310,96 +3454,6 @@ document.addEventListener('click',e=>{
     } catch(e) {}
   }
 })();
-
-// ══ MOBILE WEEK VIEW ══
-function shiftWeekView(dir) {
-  weekViewOffset += dir;
-  renderWeekView();
-}
-
-function toggleFullCal() {
-  const isFull = document.body.classList.toggle('mob-fullcal');
-  const btn = document.getElementById('wvFullBtn');
-  if (btn) { btn.textContent = isFull ? '📋 Week' : '📅 Month'; btn.classList.toggle('active', isFull); }
-  if (isFull) renderCalendar(); else renderWeekView();
-}
-
-function onWvColClick(dN, dM) {
-  const dayItems = ITEMS.filter(i => (i.section==='content'||i.section==='archive') && i.day===dN && i.month===dM);
-  if (dayItems.length === 0) addInlineItemWithDate(dN, dM);
-  else openDayView(dN, dM);
-}
-
-function renderWeekView() {
-  const cols = document.getElementById('wvCols');
-  const label = document.getElementById('wvDateLabel');
-  if (!cols || !document.body.classList.contains('mobile-device')) return;
-  // Don't render if full-cal mode is active
-  if (document.body.classList.contains('mob-fullcal')) return;
-
-  // Week start: Sunday of offset week
-  const base = new Date(TODAY);
-  base.setDate(base.getDate() - base.getDay() + weekViewOffset * 7);
-
-  const weekEnd = new Date(base); weekEnd.setDate(weekEnd.getDate() + 6);
-  const fmt = d => `${d.getDate()} ${d.toLocaleString('en',{month:'short'})}`;
-  if (label) label.textContent = `${fmt(base)} — ${fmt(weekEnd)}`;
-
-  const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  let html = '';
-
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(base); d.setDate(d.getDate() + i);
-    const dN = d.getDate(), dM = d.getMonth() + 1;
-    const isToday = d.getTime() === TODAY.getTime();
-    const isPast  = d < TODAY;
-
-    const dayItems = ITEMS.filter(it => {
-      if (it.section === 'deleted') return false;
-      return it.day === dN && it.month === dM;
-    }).sort((a,b) => (a.time||'00:00').localeCompare(b.time||'00:00'));
-
-    const hasMissed = dayItems.some(it => it.status === 'missed') ||
-      (isPast && dayItems.some(it => it.section==='content' && !['published','missed','postponed'].includes(it.status)));
-
-    const shown = dayItems.slice(0, 2);
-    const extra = dayItems.length - shown.length;
-
-    const chips = shown.map(it => {
-      const clr = it.status==='published' ? 'var(--green)'
-                : it.status==='missed'    ? 'var(--red)'
-                : it.status==='ready'     ? 'var(--accent)'
-                : it.status==='waiting'   ? 'var(--yellow)'
-                : 'var(--text-dim)';
-      return `<div class="wv-chip" style="background:${clr}20;color:${clr};border:1px solid ${clr}40"
-               onclick="event.stopPropagation();openModal(${it.id})">
-               ${it.time?`<span style="font-size:8px;opacity:.75;margin-right:1px">${it.time}</span>`:''}${it.title}
-             </div>`;
-    }).join('');
-
-    const extraBadge = extra > 0 ? `<div class="wv-chip" style="background:var(--card);color:var(--text-dim);text-align:center;font-size:8.5px">+${extra}</div>` : '';
-    const emptyHint  = dayItems.length === 0 ? `<div class="wv-empty-hint">+ add</div>` : '';
-
-    const headCls = isToday ? 'wv-today' : (hasMissed ? 'wv-missed' : '');
-    const colCls  = isToday ? 'wv-today-col' : '';
-    const hol = getHolidays(d);
-    const holHtml = hol.length
-      ? `<div class="wv-holiday cal-hol-${hol[0].cal}" title="${hol.map(h=>h.name).join(' · ')}">${hol[0].name}</div>`
-      : '';
-
-    html += `<div class="wv-col ${colCls}" onclick="onWvColClick(${dN},${dM})">
-      <div class="wv-col-head ${headCls}">
-        <div>${DAY_NAMES[i]}</div>
-        <div style="font-size:14px;font-weight:800;color:${isToday?'var(--red)':'inherit'}">${dN}</div>
-      </div>
-      <div class="wv-col-body">${holHtml}${chips}${extraBadge}${emptyHint}</div>
-    </div>`;
-  }
-  cols.innerHTML = html;
-}
-
-
-
 
 
 // ── shared day hover popup (split calendar + row date picker) ──
@@ -4054,8 +4108,284 @@ function pickTvDate(dN, dM) {
   else tvEditDate(id, `${TODAY.getFullYear()}-${String(dM).padStart(2,'0')}-${String(dN).padStart(2,'0')}`);
 }
 
+// ══════════ MOBILE APP ══════════
+let mbScreen     = 'today';
+let mbWeekOffset = 0;
+let mbFilter     = 'all';
+let mbSearch     = '';
+let mbAddDraft   = { type:'post', platform:'IG', when:'today' };
+
+function isMobile() { return document.body.classList.contains('mobile-device'); }
+
+function mbGo(name) {
+  mbScreen = name;
+  document.querySelectorAll('.mb-screen').forEach(el =>
+    el.classList.toggle('on', el.id === 'mb' + name[0].toUpperCase() + name.slice(1)));
+  document.querySelectorAll('.mb-tab').forEach(t => t.classList.toggle('on', t.dataset.s === name));
+  if (name === 'add') renderMbAdd();
+  const sc = document.getElementById('mb' + name[0].toUpperCase() + name.slice(1));
+  if (sc) sc.scrollTop = 0;
+}
+
+function renderMobile() {
+  if (!isMobile()) return;
+  renderMbToday(); renderMbWeek(); renderMbAll(); updateMbBadge();
+}
+
+function updateMbBadge() {
+  const b = document.getElementById('mbBadge');
+  if (!b) return;
+  const n = countUnpublished();
+  b.textContent = n; b.style.display = n > 0 ? 'flex' : 'none';
+}
+
+// shared card markup for the Today / All screens
+function mbItemCard(i, opts) {
+  opts = opts || {};
+  const scheduled = i.day && i.month;
+  const date = scheduled ? `${String(i.day).padStart(2,'0')}/${String(i.month).padStart(2,'0')}` : '—';
+  const showTime = opts.timeFirst && i.time;
+  return `<div class="mb-item${scheduled?'':' unsched'}${i.status==='published'?' done':''}" onclick="openModal(${i.id})">
+    <div class="mb-item-time">
+      <span class="t mb-num">${showTime ? i.time : date}</span>
+      <span class="tt">${TYPE_LABELS[i.type]||i.type}</span>
+    </div>
+    <div class="mb-item-body">
+      <div class="mb-item-title">${i.starred?'⭐ ':''}${i.title}</div>
+      <div class="mb-item-meta">
+        <span class="mb-chip">${PLAT_ICONS[i.platform]||'📌'} ${i.platform}</span>
+        <span class="mb-chip s-${i.status}">${STATUS_LABELS[i.status]||i.status}</span>
+      </div>
+      ${opts.publish && i.status !== 'published'
+        ? `<button class="mb-pub" onclick="event.stopPropagation();mbPublish(${i.id},this)">Mark published</button>` : ''}
+    </div>
+  </div>`;
+}
+
+function mbPublish(id, btn) {
+  const item = ITEMS.find(i => i.id === id);
+  if (!item) return;
+  btn.textContent = 'Published ✓'; btn.classList.add('done');
+  item.status = 'published'; item.section = 'archive';
+  fsUpdate(id, { status:'published', section:'archive' });
+  logAction('Published → ✅', item.title, '✅');
+  setTimeout(() => { renderMobile(); updateStats(); }, 420);
+}
+
+// ── Today ──
+function renderMbToday() {
+  const el = document.getElementById('mbToday');
+  if (!el) return;
+  const MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dN = TODAY.getDate(), dM = TODAY.getMonth() + 1;
+
+  const todays = ITEMS.filter(i => (i.section==='content'||i.section==='archive') && i.day===dN && i.month===dM)
+    .sort((a,b) => (a.time||'99:99').localeCompare(b.time||'99:99'));
+
+  const tm = TODAY.getTime();
+  const overdue = ITEMS.filter(i => {
+    if (i.section !== 'content' && i.section !== 'backlog') return false;
+    if (i.status === 'published' || !i.day || !i.month) return false;
+    return new Date(TODAY.getFullYear(), i.month-1, i.day).getTime() < tm;
+  }).sort((a,b) => (a.month*100+a.day) - (b.month*100+b.day));
+
+  const notReady = todays.filter(i => i.status !== 'ready' && i.status !== 'published').length;
+  const sub = todays.length === 0 ? 'Nothing scheduled for today.'
+    : notReady ? `${notReady} still ${notReady===1?'needs':'need'} work.`
+    : 'All of them are ready to go.';
+
+  const hol = getHolidays(TODAY);
+
+  el.innerHTML = `
+    <div class="mb-hero">
+      <div class="mb-hero-date"><span class="d mb-num">${dN}</span><span class="m">${MN[TODAY.getMonth()]}</span></div>
+      <div class="mb-hero-rule"></div>
+      <div class="mb-hero-txt">
+        <b>${todays.length ? `${todays.length} going out today` : 'Clear today'}</b>
+        <span>${sub}</span>
+      </div>
+    </div>
+    ${hol.length ? `<div class="mb-hol ${hol[0].cal}">${hol.map(h=>h.name).join(' · ')}</div>` : ''}
+    ${overdue.length ? `
+      <div class="mb-alert" onclick="mbGo('today');document.getElementById('mbOverdue')?.scrollIntoView({behavior:'smooth'})">
+        <div class="mb-alert-n mb-num">${overdue.length}</div>
+        <div class="mb-alert-t">Did these go out?
+          <small>${overdue.length} past item${overdue.length>1?'s':''} never marked</small></div>
+        <div class="mb-alert-go">›</div>
+      </div>` : ''}
+    ${todays.length ? `<div class="mb-slab">Today <span class="c mb-num">${todays.length}</span></div>`
+      + todays.map(i => mbItemCard(i, {timeFirst:true, publish:true})).join('') : ''}
+    ${overdue.length ? `<div class="mb-slab" id="mbOverdue">Overdue <span class="c mb-num">${overdue.length}</span></div>`
+      + overdue.map(i => mbItemCard(i, {publish:true})).join('') : ''}
+    ${!todays.length && !overdue.length
+      ? `<div class="mb-empty">Nothing needs you today.<br>Tap <b>+</b> to capture an idea.</div>` : ''}
+  `;
+}
+
+// ── Week ──
+function renderMbWeek() {
+  const el = document.getElementById('mbWeek');
+  if (!el) return;
+  const base = new Date(TODAY);
+  base.setDate(base.getDate() - base.getDay() + mbWeekOffset * 7);
+  const end = new Date(base); end.setDate(end.getDate() + 6);
+  const f = d => `${d.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]}`;
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  let days = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(base); d.setDate(base.getDate() + i);
+    const dN = d.getDate(), dM = d.getMonth() + 1;
+    const isToday = d.getTime() === TODAY.getTime();
+    const items = ITEMS.filter(x => (x.section==='content'||x.section==='archive') && x.day===dN && x.month===dM)
+      .sort((a,b) => (a.time||'99:99').localeCompare(b.time||'99:99'));
+    const hol = getHolidays(d);
+    const dotFor = st => st==='published' ? 'var(--green)' : st==='missed' ? 'var(--red)'
+      : st==='waiting' ? 'var(--yellow)' : st==='ready' ? 'var(--accent)' : 'var(--text-faint)';
+
+    days += `<div class="mb-day${isToday?' today':''}">
+      <div class="mb-day-rail"><span class="mb-day-dow">${DOW[i]}</span><span class="mb-day-n mb-num">${dN}</span></div>
+      <div class="mb-day-stack">
+        ${hol.length ? `<div class="mb-hol ${hol[0].cal}">${hol.map(h=>h.name).join(' · ')}</div>` : ''}
+        ${items.map(x => `<div class="mb-mini" onclick="openModal(${x.id})">
+            <span class="dot" style="background:${dotFor(x.status)}"></span>
+            <span class="mt mb-num">${x.time||'—'}</span>
+            <span class="mn">${x.starred?'⭐ ':''}${x.title}</span>
+          </div>`).join('')}
+        ${items.length ? '' : `<div class="mb-empty-day" onclick="mbAddOn(${dN},${dM})">+ Nothing scheduled</div>`}
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="mb-slab">${f(base)} — ${f(end)}
+      <span class="nav">
+        <button class="mb-nav-btn" onclick="mbShiftWeek(-1)">‹</button>
+        <button class="mb-nav-btn" onclick="mbThisWeek()">Today</button>
+        <button class="mb-nav-btn" onclick="mbShiftWeek(1)">›</button>
+      </span>
+    </div>${days}`;
+}
+function mbShiftWeek(d) { mbWeekOffset += d; renderMbWeek(); }
+function mbThisWeek()   { mbWeekOffset = 0;  renderMbWeek(); }
+function mbAddOn(dN, dM) {
+  const id = Date.now();
+  const item = { id, title:'Untitled', type:'post', status:'writing', priority:'medium',
+    platform:'IG', time:'18:00', caption:'', hashtags:'', notes:'', driveLink:'',
+    section:'content', starred:false, day:dN, month:dM, checklist:[] };
+  ITEMS.unshift(item); fsSet(id, item);
+  logAction('Added item', item.title, '➕');
+  renderMobile();
+  _modalIsNew = true;
+  setTimeout(() => openModal(id), 60);
+}
+
+// ── All ──
+function renderMbAll() {
+  const el = document.getElementById('mbAll');
+  if (!el) return;
+  const q = mbSearch.trim().toLowerCase();
+  let items = ITEMS.filter(i => i.section === 'content' || i.section === 'backlog');
+  if (mbFilter === 'nodate')  items = items.filter(i => !i.day || !i.month);
+  if (mbFilter === 'ready')   items = items.filter(i => i.status === 'ready');
+  if (mbFilter === 'missed')  items = items.filter(i => i.status === 'missed');
+  if (mbFilter === 'backlog') items = items.filter(i => i.section === 'backlog');
+  if (q) items = items.filter(i => [i.title,i.caption,i.notes,i.hashtags].some(f => (f||'').toLowerCase().includes(q)));
+  items = items.sort((a,b) => {
+    const ka = (a.day&&a.month) ? a.month*100+a.day : 9999;
+    const kb = (b.day&&b.month) ? b.month*100+b.day : 9999;
+    return ka - kb;
+  });
+
+  const all = ITEMS.filter(i => i.section === 'content' || i.section === 'backlog');
+  const counts = {
+    all: all.length,
+    nodate: all.filter(i => !i.day || !i.month).length,
+    ready: all.filter(i => i.status === 'ready').length,
+    missed: all.filter(i => i.status === 'missed').length,
+    backlog: all.filter(i => i.section === 'backlog').length,
+  };
+  const chip = (k, label) =>
+    `<button class="mb-fchip${mbFilter===k?' on':''}" onclick="mbSetFilter('${k}')">${label} ${counts[k]}</button>`;
+
+  el.innerHTML = `
+    <div class="mb-search"><span>⌕</span>
+      <input placeholder="Search content…" value="${escAttr(mbSearch)}" oninput="mbOnSearch(this.value)">
+    </div>
+    <div class="mb-filters">
+      ${chip('all','All')}${chip('nodate','No date')}${chip('ready','Ready')}${chip('missed','Missed')}${chip('backlog','Backlog')}
+    </div>
+    ${items.length ? items.map(i => mbItemCard(i, {})).join('')
+      : `<div class="mb-empty">Nothing matches.</div>`}`;
+}
+function mbSetFilter(k) { mbFilter = k; renderMbAll(); }
+function mbOnSearch(v) {
+  mbSearch = v;
+  const el = document.getElementById('mbAll');
+  const pos = el.querySelector('.mb-search input')?.selectionStart;
+  renderMbAll();
+  const inp = el.querySelector('.mb-search input');
+  if (inp) { inp.focus(); if (pos != null) inp.setSelectionRange(pos, pos); }
+}
+
+// ── Add ──
+function renderMbAdd() {
+  const el = document.getElementById('mbAdd');
+  if (!el) return;
+  const d = mbAddDraft;
+  const opt = (group, val, label) =>
+    `<button class="mb-opt${d[group]===val?' on':''}" onclick="mbPick('${group}','${val}')">${label}</button>`;
+  el.innerHTML = `
+    <div class="mb-slab">Quick capture</div>
+    <div class="mb-field">
+      <label class="mb-field-l" for="mbTitle">What is it?</label>
+      <input class="mb-in" id="mbTitle" placeholder="e.g. Reel — Sadot teaser" value="${escAttr(d.title||'')}">
+    </div>
+    <div class="mb-field"><span class="mb-field-l">Type</span><div class="mb-opts">
+      ${opt('type','post','Post')}${opt('type','reel','Reel')}${opt('type','story','Story')}${opt('type','general','General')}
+    </div></div>
+    <div class="mb-field"><span class="mb-field-l">Platform</span><div class="mb-opts">
+      ${opt('platform','IG','📸 IG')}${opt('platform','FB','📘 FB')}${opt('platform','Social','📱 Social')}${opt('platform','WA','💬 WA')}
+    </div></div>
+    <div class="mb-field"><span class="mb-field-l">When</span><div class="mb-opts">
+      ${opt('when','today','Today')}${opt('when','tomorrow','Tomorrow')}${opt('when','backlog','Backlog')}
+    </div></div>
+    <div class="mb-savebar">
+      <button class="mb-save" onclick="mbSaveNew()">Save</button>
+      <button class="mb-save ghost" onclick="mbGo('today')">Cancel</button>
+    </div>`;
+}
+function mbPick(group, val) {
+  mbAddDraft.title = document.getElementById('mbTitle')?.value || '';
+  mbAddDraft[group] = val;
+  renderMbAdd();
+}
+function mbSaveNew() {
+  const title = (document.getElementById('mbTitle')?.value || '').trim();
+  if (!title) { document.getElementById('mbTitle')?.focus(); toast('Give it a name first'); return; }
+  const d = mbAddDraft;
+  let day = null, month = null, section = 'content';
+  if (d.when === 'today')        { day = TODAY.getDate(); month = TODAY.getMonth()+1; }
+  else if (d.when === 'tomorrow'){ const t = new Date(TODAY); t.setDate(t.getDate()+1); day = t.getDate(); month = t.getMonth()+1; }
+  else                           { section = 'backlog'; }
+
+  const id = Date.now();
+  const item = { id, title, type:d.type, status:'writing', priority:'medium', platform:d.platform,
+    time:'18:00', caption:'', hashtags:'', notes:'', driveLink:'', section, starred:false,
+    day, month, checklist:[] };
+  ITEMS.unshift(item); fsSet(id, item);
+  logAction('Added item', title, '➕');
+  mbAddDraft = { type:'post', platform:'IG', when:'today' };
+  renderMobile(); updateStats();
+  toast('Added ✓');
+  mbGo(section === 'backlog' ? 'all' : 'today');
+}
+
 // ══ INIT ══
-function updateAll(){ updateStats(); renderItems(); renderCalendar(); renderWeekView(); if(tableOpen) renderTableView(); }
+function updateAll(){
+  if (isMobile()) { updateStats(); renderMobile(); return; }
+  updateStats(); renderItems(); renderCalendar(); if(tableOpen) renderTableView();
+}
 document.getElementById('filterBar').style.display='flex';
 window.addEventListener('resize', () => { if (currentUser) renderCalendar(); });
 
@@ -4098,8 +4428,11 @@ document.addEventListener('click', e => {
 
 // ══ MOBILE UA DETECTION ══
 (function() {
-  if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) {
+  const ua = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const touch = window.matchMedia('(pointer:coarse)').matches && window.innerWidth < 900;
+  if (ua || touch) {
     document.body.classList.add('mobile-device');
+    mbGo('today');
   }
 })();
 </script>
