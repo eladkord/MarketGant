@@ -612,6 +612,18 @@
     .btn-copy:hover      { border-color: var(--green); color: var(--green); }
     .btn-danger    { background: transparent; border: 1px solid #ef444428; color: var(--red); margin-right: auto; }
     .btn-danger:hover    { background: #ef444415; border-color: var(--red); }
+    /* ══ FIELDS EDITOR (settings) ══ */
+    .field-row-edit { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .field-row-edit input[type=color] {
+      width: 36px; height: 32px; padding: 2px; border: 1px solid var(--border);
+      background: var(--card); border-radius: 8px; cursor: pointer; flex-shrink: 0;
+    }
+    .fx-del {
+      background: none; border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text-dim); cursor: pointer; padding: 5px 10px; font-size: 13px; flex-shrink: 0;
+    }
+    .fx-del:hover { color: var(--red); border-color: var(--red); background: #ef444412; }
+
     /* ══ RECURRING ══ */
     .repeat-row { display: flex; align-items: center; gap: 10px; padding: 11px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 11px; }
     .repeat-label { font-size: 14px; font-weight: 700; color: var(--text-dim); flex: 1; }
@@ -1317,6 +1329,7 @@
     <div class="stat-chip c-red">   <span class="stat-num" id="statMissed">0</span> <span class="stat-label">Missed</span></div>
     <div class="stat-chip c-yellow"><span class="stat-num" id="statProg">0</span>   <span class="stat-label">In Progress</span></div>
     <button class="tv-ctl" style="padding:6px 15px;font-size:14px;font-weight:700" onclick="openTableView()">📋 All Content</button>
+    <button class="tv-ctl" id="undoBtn" style="padding:6px 13px;font-size:14px;font-weight:700;opacity:0.4" onclick="undoLast()" title="Undo last change (Ctrl+Z)">↩ Undo</button>
   </div>
   <div class="topbar-right">
     <a class="link-btn" href="#" target="_blank">🌐 Website</a>
@@ -1426,7 +1439,8 @@
 <div id="mobileApp">
   <div class="mb-head">
     <div class="mb-brand"><b>MarketGant</b><span>Fusion Culture</span></div>
-    <button class="mb-head-btn first" onclick="toggleTheme(!lightMode)" title="Light / dark">◐</button>
+    <button class="mb-head-btn first" id="mbUndoBtn" style="opacity:0.4" onclick="undoLast()" title="Undo">↩</button>
+    <button class="mb-head-btn" onclick="toggleTheme(!lightMode)" title="Light / dark">◐</button>
     <button class="mb-head-btn" onclick="openSettings()" title="Settings">⚙</button>
   </div>
 
@@ -1464,6 +1478,7 @@
   <div class="settings-tabs">
     <button class="stab active" onclick="switchSettingsTab('general',this)">General</button>
     <button class="stab" id="usersTab" onclick="switchSettingsTab('users',this)">Users</button>
+    <button class="stab" onclick="switchSettingsTab('fields',this)">Fields</button>
     <button class="stab" onclick="switchSettingsTab('history',this)">History</button>
   </div>
   <div class="settings-body" id="settingsBody"></div>
@@ -1711,10 +1726,8 @@
       <option value="ready">Ready</option><option value="published">Published ✅</option>
       <option value="missed">Missed</option><option value="postponed">Postponed</option>
     </select>
-    <select class="tv-ctl" onchange="bulkSet('type',this.value);this.value=''">
+    <select class="tv-ctl" id="tvBulkType" onchange="bulkSet('type',this.value);this.value=''">
       <option value="">Set type…</option>
-      <option value="post">Post</option><option value="reel">Reel</option>
-      <option value="story">Story</option><option value="general">General</option>
     </select>
     <select class="tv-ctl" id="tvBulkPlat" onchange="bulkSet('platform',this.value);this.value=''">
       <option value="">Set platform…</option>
@@ -1947,6 +1960,9 @@ function startListeners() {
       db.collection('config').doc('settings').set({ users: USERS }, { merge: true });
     }
     if (d.customOrder) customOrder = d.customOrder;
+    if (Array.isArray(d.contentTypes) && d.contentTypes.length) CONTENT_TYPES = d.contentTypes;
+    if (Array.isArray(d.platformsCfg) && d.platformsCfg.length)  PLATFORMS_CFG = d.platformsCfg;
+    applyFieldConfig();
     // If settings panel is open on users tab, refresh it
     const panel = document.getElementById('settingsPanel');
     if (panel?.classList.contains('open') && currentSettingsTab === 'users') renderSettingsTab('users');
@@ -2031,9 +2047,25 @@ let currentSort     = 'custom';
 let customOrder     = [];
 
 const _now = new Date(); const TODAY = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate());
-const TYPE_LABELS   = { post:'Post', reel:'Reel', story:'Story', general:'General' };
+// ══ EDITABLE FIELD CONFIG ══
+// Content types and platforms are data, not code — editable in Settings → Fields,
+// shared through Firestore config/settings (contentTypes / platformsCfg).
+let CONTENT_TYPES = [
+  { id:'post',     label:'Post',     icon:'📝', color:'#3b82f6' },
+  { id:'reel',     label:'Reel',     icon:'🎬', color:'#ec4899' },
+  { id:'story',    label:'Story',    icon:'⭕', color:'#f97316' },
+  { id:'carousel', label:'Carousel', icon:'🎠', color:'#a855f7' },
+  { id:'general',  label:'General',  icon:'📌', color:'#8b5cf6' },
+];
+let PLATFORMS_CFG = [
+  { id:'Social', icon:'📱' }, { id:'FB', icon:'📘' }, { id:'IG', icon:'📸' },
+  { id:'ALL', icon:'📡' },    { id:'MAIL', icon:'📧' }, { id:'WA', icon:'💬' },
+  { id:'FBGRP', icon:'👥' },  { id:'Vibez', icon:'🎵' }, { id:'SMS', icon:'📱' },
+  { id:'General', icon:'📌' },
+];
+let TYPE_LABELS = {};   // derived in applyFieldConfig()
 const STATUS_LABELS = { ready:'Ready', writing:'NeedText', waiting:'Waiting', published:'Published ✅', postponed:'Postponed', missed:'Missed' };
-const PLAT_ICONS    = { Social:'📱', FB:'📘', IG:'📸', ALL:'📡', MAIL:'📧', WA:'💬', FBGRP:'👥', Vibez:'🎵', SMS:'📱', General:'📌' };
+let PLAT_ICONS = {};    // derived in applyFieldConfig()
 const HISTORY_ICONS = { added:'➕', edited:'✏️', deleted:'🗑', moved:'📦', starred:'⭐', scheduled:'📅', archived:'🗂', login:'🔑', logout:'🔒', duplicate:'⎘' };
 
 function logAction(action, itemTitle, icon) {
@@ -2088,6 +2120,7 @@ function exitTrash() {
   renderItems();
 }
 function emptyTrash() {
+  snapUndo();
   const toDelete = ITEMS.filter(i => i.section === 'deleted');
   if (!toDelete.length) return;
   const n = toDelete.length;
@@ -2208,6 +2241,7 @@ function startEditTitle(event, id) {
   inp.className = 'item-title-input'; inp.value = item.title;
   span.replaceWith(inp); inp.focus({ preventScroll: true }); inp.select();
   const save = () => {
+    snapUndo();
     const newTitle = inp.value.trim() || item.title;
     if (newTitle !== oldTitle) { item.title = newTitle; fsUpdate(id, {title: newTitle}); logAction('Edited item', newTitle, '✏️'); }
     updateAll();
@@ -2220,19 +2254,12 @@ function startEditTitle(event, id) {
 function showQuickDrop(event, id, field) {
   event.stopPropagation();
   const drop = document.getElementById('quickDrop');
-  const typeOpts = [
-    {v:'post',l:'📝 Post',cls:'type-post'},{v:'reel',l:'🎬 Reel',cls:'type-reel'},
-    {v:'story',l:'⭕ Story',cls:'type-story'},{v:'general',l:'📌 General',cls:'type-general'},
-  ];
+  const typeOpts = CONTENT_TYPES.map(t => ({ v:t.id, l:`${t.icon} ${t.label}`, cls:'type-'+t.id }));
   const statOpts = [
     {v:'writing',l:'✍️ NeedText'},{v:'waiting',l:'⏳ Waiting'},{v:'ready',l:'✅ Ready'},
     {v:'published',l:'✅ Published'},{v:'postponed',l:'⏸️ Postponed'},{v:'missed',l:'❌ Missed'},
   ];
-  const platOpts = [
-    {v:'IG',l:'📸 IG'},{v:'FB',l:'📘 FB'},{v:'ALL',l:'📡 ALL'},
-    {v:'MAIL',l:'📧 MAIL'},{v:'WA',l:'💬 WA'},{v:'FBGRP',l:'👥 FBGRP'},
-    {v:'Vibez',l:'🎵 Vibez'},{v:'SMS',l:'📱 SMS'},{v:'General',l:'📌 General'},
-  ];
+  const platOpts = PLATFORMS_CFG.map(pl => ({ v:pl.id, l:`${pl.icon} ${pl.id}` }));
   const opts = field === 'type' ? typeOpts : field === 'platform' ? platOpts : statOpts;
   drop.innerHTML = opts.map(o => `<div class="fm-item" onclick="applyQuickDrop(${id},'${field}','${o.v}')">${field==='type'?`<span style="padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700" class="${o.cls}">${o.l}</span>`:o.l}</div>`).join('');
   drop.style.left = Math.min(event.clientX, window.innerWidth-165) + 'px';
@@ -2240,6 +2267,7 @@ function showQuickDrop(event, id, field) {
   drop.classList.add('open');
 }
 function applyQuickDrop(id, field, value) {
+  snapUndo();
   const item = ITEMS.find(i => i.id === id);
   if (!item) return;
   const update = {[field]: value};
@@ -2304,11 +2332,13 @@ function exitMultiSelect() {
   document.getElementById('multiBar').classList.remove('visible'); renderItems();
 }
 function bulkStar() {
+  snapUndo();
   const batch = db.batch();
   selectedIds.forEach(id => { const i=ITEMS.find(x=>x.id===id); if(i){ i.starred=!i.starred; batch.update(db.collection('items').doc(id.toString()),{starred:i.starred}); }});
   batch.commit(); exitMultiSelect(); updateAll();
 }
 function bulkMove(target) {
+  snapUndo();
   if (!db) return;
   const batch = db.batch();
   selectedIds.forEach(id => {
@@ -2363,6 +2393,7 @@ function showCtxMenu(html, event) {
 }
 function closeCtxMenu() { document.getElementById('ctxMenu').classList.remove('open'); ctxItemId = null; }
 function ctxAction(action) {
+  snapUndo();
   const item = ITEMS.find(i => i.id === ctxItemId);
   closeCtxMenu(); if (!item) return;
 
@@ -2505,6 +2536,7 @@ function onListDragOver(event) {
 }
 function onListDragLeave() { document.getElementById('itemsList').classList.remove('list-drop-active'); }
 function onDropToList(event) {
+  snapUndo();
   document.getElementById('itemsList').classList.remove('list-drop-active');
   clearDragOverCard();
   if (dragSource === 'calendar') {
@@ -2583,6 +2615,7 @@ function onSecTabDragLeave(event) {
   event.currentTarget.classList.remove('drag-over');
 }
 function onSecTabDrop(event, sec) {
+  snapUndo();
   event.currentTarget.classList.remove('drag-over');
   if (dragSource !== 'list' || !dragItemId) return;
   const item = ITEMS.find(i => i.id === dragItemId);
@@ -2600,6 +2633,7 @@ function onSecTabDrop(event, sec) {
 
 // ══ INLINE ITEM CREATE ══
 function addInlineItem() {
+  snapUndo();
   const id = Date.now();
   const sec = currentSection === 'trash' ? 'content' : currentSection;
   const newItem = { id, title: 'Untitled', type: 'post', status: 'writing', priority: 'medium',
@@ -2775,6 +2809,7 @@ function onPubDragStart(event, id) {
   event.dataTransfer.effectAllowed = 'move';
 }
 function markPublishedInPopup(id, btn) {
+  snapUndo();
   btn.textContent = 'Done ✅';
   btn.style.background = 'var(--green)';
   btn.style.color = 'white';
@@ -2966,6 +3001,7 @@ function onCalCellClick(dN, dM) {
   else openDayView(dN, dM);
 }
 function addInlineItemWithDate(dN, dM) {
+  snapUndo();
   const id = Date.now();
   const newItem = { id, title:'Untitled', type:'post', status:'writing', priority:'medium',
     platform:'IG', time:'18:00', caption:'', hashtags:'', notes:'', driveLink:'',
@@ -3057,6 +3093,7 @@ function onChipDragStart(event,id){
   event.dataTransfer.effectAllowed='move';
 }
 function onDropToCell(event,day,month){
+  snapUndo();
   event.currentTarget.classList.remove('drop-target');
   if(dragItemId===null) return;
   const wasPubDrag = dragSource === 'pubpopup';
@@ -3151,6 +3188,42 @@ function renderSettingsTab(tab) {
         </div>
       </div>
       `;
+  } else if(tab==='fields') {
+    const tRows = CONTENT_TYPES.map((t,i)=>`
+      <div class="field-row-edit">
+        <input type="color" value="${t.color}" onchange="editFieldType(${i},'color',this.value)" title="Color">
+        <input class="settings-input" style="width:54px;text-align:center" value="${t.icon}" onchange="editFieldType(${i},'icon',this.value)" title="Icon">
+        <input class="settings-input" style="flex:1" value="${t.label}" onchange="editFieldType(${i},'label',this.value)">
+        <button class="fx-del" onclick="removeFieldType(${i})" title="Remove">✕</button>
+      </div>`).join('');
+    const pRows = PLATFORMS_CFG.map((pl,i)=>`
+      <div class="field-row-edit">
+        <input class="settings-input" style="width:54px;text-align:center" value="${pl.icon}" onchange="editFieldPlat(${i},'icon',this.value)" title="Icon">
+        <input class="settings-input" style="flex:1;opacity:0.65" value="${pl.id}" disabled title="Names are fixed once created — items reference them">
+        <button class="fx-del" onclick="removeFieldPlat(${i})" title="Remove">✕</button>
+      </div>`).join('');
+    body.innerHTML=`
+      <div class="setting-group">
+        <div class="setting-group-title">Content Types</div>
+        <div class="setting-row-sub" style="margin-bottom:10px">Color · icon · name. Changes apply everywhere immediately and sync to the whole team.</div>
+        ${tRows}
+        <div class="field-row-edit" style="margin-top:10px">
+          <input type="color" id="nfColor" value="#a855f7">
+          <input class="settings-input" id="nfIcon" style="width:54px;text-align:center" placeholder="🎠">
+          <input class="settings-input" id="nfLabel" style="flex:1" placeholder="New type name…" onkeydown="if(event.key==='Enter')addFieldType()">
+          <button class="settings-btn primary" onclick="addFieldType()">Add</button>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-group-title">Platforms</div>
+        ${pRows}
+        <div class="field-row-edit" style="margin-top:10px">
+          <input class="settings-input" id="npIcon" style="width:54px;text-align:center" placeholder="📌">
+          <input class="settings-input" id="npName" style="flex:1" placeholder="New platform name…" onkeydown="if(event.key==='Enter')addFieldPlat()">
+          <button class="settings-btn primary" onclick="addFieldPlat()">Add</button>
+        </div>
+      </div>
+      <div class="setting-row-sub">Removing a type or platform does not touch existing items — they keep their old value.</div>`;
   } else if(tab==='users') {
     if(!isAdmin){
       body.innerHTML=`<div class="admin-only-notice">🔒 User management is only available to the admin account.</div>`; return;
@@ -3268,8 +3341,7 @@ function closeModal(){ document.getElementById('modalOverlay').classList.remove(
 function closeOnOverlay(e){ if(e.target===document.getElementById('modalOverlay')) closeModal(); }
 function selectType(type,save=true){
   currentType=type;
-  const L={post:'Post',reel:'Reel',story:'Story',general:'General'};
-  const b=document.getElementById('modalTypeBadge'); b.className=`type-badge type-${type}`; b.textContent=L[type];
+  const b=document.getElementById('modalTypeBadge'); b.className=`type-badge type-${type}`; b.textContent=TYPE_LABELS[type]||type;
   document.querySelectorAll('#typeSelector .badge-opt').forEach(x=>{x.className='badge-opt';if(x.dataset.type===type)x.classList.add('sel-'+type);});
   if(save&&currentItemId){const i=ITEMS.find(x=>x.id===currentItemId);if(i)i.type=type;}
 }
@@ -3290,6 +3362,7 @@ function updateDrivePreview(link){
   else p.innerHTML='<span>📁 Paste a Drive link to preview</span>';
 }
 function saveItem(){
+  snapUndo();
   const title=document.getElementById('modalTitle').value.trim();
   if(!title){document.getElementById('modalTitle').focus();return;}
   const data={title,type:currentType,status:currentStatus,priority:currentPriority,
@@ -3388,6 +3461,7 @@ function addDaysToItem(day, month, daysToAdd) {
   return { day: d.getDate(), month: d.getMonth() + 1 };
 }
 function deleteItemModal(){
+  snapUndo();
   if(currentItemId===null) return;
   const item=ITEMS.find(i=>i.id===currentItemId);
   if(!item) return;
@@ -3446,6 +3520,7 @@ function closeSeriesDialog() {
 }
 
 function applySeriesScope(scope) {
+  snapUndo();
   // Capture before closeSeriesDialog nulls them
   const action = _seriesAction;
   const savedData = _pendingSaveData;
@@ -3502,6 +3577,62 @@ function copyCaption(){
   navigator.clipboard.writeText(c+(h?'\n\n'+h:''));
   toast('📋 Caption copied!');
 }
+
+
+// ══════════ UNDO ══════════
+// Snapshot-based: every user action stores the ITEMS state it is about to
+// change. Ctrl/Cmd+Z (or the ↩ buttons) restores the previous state and
+// writes the differences back to Firestore in one batch.
+let UNDO_STACK = [];
+const UNDO_MAX = 40;
+
+function snapUndo() {
+  const snap = JSON.stringify(ITEMS);
+  if (UNDO_STACK.length && UNDO_STACK[UNDO_STACK.length - 1] === snap) return;  // no-op action
+  UNDO_STACK.push(snap);
+  if (UNDO_STACK.length > UNDO_MAX) UNDO_STACK.shift();
+  updateUndoUI();
+}
+
+function undoLast() {
+  // discard snapshots identical to the current state (actions that changed nothing)
+  while (UNDO_STACK.length && UNDO_STACK[UNDO_STACK.length - 1] === JSON.stringify(ITEMS)) UNDO_STACK.pop();
+  if (!UNDO_STACK.length) { toast('Nothing to undo'); updateUndoUI(); return; }
+  const prev = JSON.parse(UNDO_STACK.pop());
+  const prevIds = new Set(prev.map(i => i.id));
+  if (db) {
+    const batch = db.batch();
+    prev.forEach(pItem => {
+      const cur = ITEMS.find(i => i.id === pItem.id);
+      if (!cur || JSON.stringify(cur) !== JSON.stringify(pItem))
+        batch.set(db.collection('items').doc(pItem.id.toString()), pItem);
+    });
+    ITEMS.forEach(c => { if (!prevIds.has(c.id)) batch.delete(db.collection('items').doc(c.id.toString())); });
+    batch.commit();
+  }
+  ITEMS = prev;
+  logAction('Undo', '', '↩');
+  updateAll();
+  toast('↩ Undone');
+  updateUndoUI();
+}
+
+function updateUndoUI() {
+  ['undoBtn', 'mbUndoBtn'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.style.opacity = UNDO_STACK.length ? '1' : '0.4';
+  });
+}
+
+// Ctrl/Cmd+Z anywhere — except inside text fields, where the native undo stays
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+    const t = e.target;
+    if (t.closest && t.closest('input, textarea, [contenteditable="true"]')) return;
+    e.preventDefault();
+    undoLast();
+  }
+});
 
 // ══ TOAST ══
 function toast(msg){
@@ -3867,7 +3998,7 @@ let tableSelected  = new Set();
 let _tvPickerId    = null;   // item whose date the picker is editing
 let _tvPickerMonth = null;   // Date marking the picker's displayed month
 
-const PLATFORMS = ['Social','FB','IG','ALL','MAIL','WA','FBGRP','Vibez','SMS','General'];
+let PLATFORMS = [];     // derived in applyFieldConfig()
 
 function openTableView() {
   tableOpen = true;
@@ -3932,7 +4063,7 @@ function renderTableView() {
   const sel = (val, list, fn) => list.map(o =>
     `<option value="${o[0]}"${o[0]===val?' selected':''}>${o[1]}</option>`).join('');
 
-  const TYPES  = [['post','Post'],['reel','Reel'],['story','Story'],['general','General']];
+  const TYPES  = CONTENT_TYPES.map(t => [t.id, t.label]);
   const STATS  = [['writing','NeedText'],['waiting','Waiting'],['ready','Ready'],
                   ['published','Published ✅'],['missed','Missed'],['postponed','Postponed']];
   const PRIOS  = [['high','High'],['medium','Medium'],['low','Low']];
@@ -3994,6 +4125,7 @@ function escAttr(s) {
 
 // ── cell edits ──
 function tvEdit(id, field, value) {
+  snapUndo();
   const item = ITEMS.find(i => i.id === id);
   if (!item) return;
   const upd = { [field]: value };
@@ -4011,6 +4143,7 @@ function tvEdit(id, field, value) {
   renderTableView();
 }
 function tvEditDate(id, val) {
+  snapUndo();
   const item = ITEMS.find(i => i.id === id);
   if (!item) return;
   if (!val) { item.day = null; item.month = null; fsUpdate(id,{day:null,month:null}); }
@@ -4027,6 +4160,7 @@ function tvEditDate(id, val) {
 }
 function openFromTable(id) { closeTableView(); setTimeout(()=>openModal(id), 60); }
 function addRowFromTable() {
+  snapUndo();
   const id = Date.now();
   const item = { id, title:'Untitled', type:'post', status:'writing', priority:'medium',
     platform:'IG', time:'18:00', caption:'', hashtags:'', notes:'', driveLink:'',
@@ -4075,6 +4209,7 @@ function updateTableBulkBar() {
   document.getElementById('tvBulk').classList.toggle('on', tableSelected.size > 0);
 }
 function bulkSet(field, value) {
+  snapUndo();
   if (!value || !tableSelected.size) return;
   const batch = db ? db.batch() : null;
   let n = 0;
@@ -4098,6 +4233,7 @@ function bulkSet(field, value) {
   renderTableView();
 }
 function bulkTableStar() {
+  snapUndo();
   if (!tableSelected.size) return;
   const batch = db ? db.batch() : null;
   tableSelected.forEach(id => {
@@ -4112,6 +4248,7 @@ function bulkTableStar() {
   renderTableView();
 }
 function bulkTableClearDate() {
+  snapUndo();
   if (!tableSelected.size) return;
   const batch = db ? db.batch() : null;
   tableSelected.forEach(id => {
@@ -4126,6 +4263,7 @@ function bulkTableClearDate() {
   renderTableView();
 }
 function bulkTableDelete() {
+  snapUndo();
   if (!tableSelected.size) return;
   const n = tableSelected.size;
   const batch = db ? db.batch() : null;
@@ -4254,6 +4392,7 @@ function mbItemCard(i, opts) {
 }
 
 function mbPublish(id, btn) {
+  snapUndo();
   const item = ITEMS.find(i => i.id === id);
   if (!item) return;
   btn.textContent = 'Published ✓'; btn.classList.add('done');
@@ -4386,6 +4525,7 @@ function renderMbWeek() {
 function mbShiftWeek(d) { mbWeekOffset += d; renderMbWeek(); }
 function mbThisWeek()   { mbWeekOffset = 0;  renderMbWeek(); }
 function mbAddOn(dN, dM) {
+  snapUndo();
   const id = Date.now();
   const item = { id, title:'Untitled', type:'post', status:'writing', priority:'medium',
     platform:'IG', time:'18:00', caption:'', hashtags:'', notes:'', driveLink:'',
@@ -4504,6 +4644,7 @@ function openMbItemSheet(id) {
 }
 function closeMbSheet() { document.getElementById('mbSheet').classList.remove('open'); }
 function mbSheetPublish(id) {
+  snapUndo();
   const item = ITEMS.find(i => i.id === id);
   if (!item) return;
   item.status = 'published'; item.section = 'archive';
@@ -4532,6 +4673,7 @@ function openMbMoveSheet(id) {
   document.getElementById('mbSheet').classList.add('open');
 }
 function mbApplyMove(id, kind) {
+  snapUndo();
   const item = ITEMS.find(i => i.id === id);
   if (!item) return;
   let day = null, month = null;
@@ -4621,13 +4763,14 @@ function renderMbAdd() {
     <div class="mb-slab">Quick capture</div>
     <div class="mb-field">
       <label class="mb-field-l" for="mbTitle">What is it?</label>
-      <input class="mb-in" id="mbTitle" placeholder="e.g. Reel — Sadot teaser" value="${escAttr(d.title||'')}">
+      <input class="mb-in" id="mbTitle" placeholder="e.g. Reel — Sadot teaser" value="${escAttr(d.title||'')}"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();mbSaveNew();}">
     </div>
     <div class="mb-field"><span class="mb-field-l">Type</span><div class="mb-opts">
-      ${opt('type','post','Post')}${opt('type','reel','Reel')}${opt('type','story','Story')}${opt('type','general','General')}
+      ${CONTENT_TYPES.map(t=>opt('type',t.id,t.label)).join('')}
     </div></div>
     <div class="mb-field"><span class="mb-field-l">Platform</span><div class="mb-opts">
-      ${opt('platform','IG','📸 IG')}${opt('platform','FB','📘 FB')}${opt('platform','Social','📱 Social')}${opt('platform','WA','💬 WA')}
+      ${PLATFORMS_CFG.map(pl=>opt('platform',pl.id,pl.icon+' '+pl.id)).join('')}
     </div></div>
     <div class="mb-field"><span class="mb-field-l">When</span><div class="mb-opts">
       ${opt('when','today','Today')}${opt('when','tomorrow','Tomorrow')}${opt('when','backlog','Backlog')}
@@ -4643,6 +4786,7 @@ function mbPick(group, val) {
   renderMbAdd();
 }
 function mbSaveNew() {
+  snapUndo();
   const title = (document.getElementById('mbTitle')?.value || '').trim();
   if (!title) { document.getElementById('mbTitle')?.focus(); toast('Give it a name first'); return; }
   const d = mbAddDraft;
@@ -4663,6 +4807,87 @@ function mbSaveNew() {
   mbGo(section === 'backlog' ? 'all' : 'today');
 }
 
+
+// ══════════ FIELD CONFIG ══════════
+function applyFieldConfig() {
+  TYPE_LABELS = {}; CONTENT_TYPES.forEach(t => TYPE_LABELS[t.id] = t.label);
+  PLAT_ICONS = {};  PLATFORMS_CFG.forEach(pl => PLAT_ICONS[pl.id] = pl.icon);
+  PLATFORMS = PLATFORMS_CFG.map(pl => pl.id);
+
+  // type colors become CSS at runtime, so new types style everywhere at once
+  let css = '';
+  CONTENT_TYPES.forEach(t => {
+    css += `.type-${t.id}{background:${t.color}18;color:${t.color};}`;
+    css += `.chip-${t.id}{background:${t.color}22;color:${t.color};border-left:3px solid ${t.color};}`;
+    css += `.badge-opt.sel-${t.id}{background:${t.color}18;border-color:${t.color};color:${t.color};}`;
+  });
+  let tag = document.getElementById('dynFieldCss');
+  if (!tag) { tag = document.createElement('style'); tag.id = 'dynFieldCss'; document.head.appendChild(tag); }
+  tag.textContent = css;
+
+  // modal type selector
+  const ts = document.getElementById('typeSelector');
+  if (ts) ts.innerHTML = CONTENT_TYPES.map(t =>
+    `<button class="badge-opt" data-type="${t.id}" onclick="selectType('${t.id}')">${t.icon} ${t.label}</button>`).join('');
+
+  // selects that carry platform / type options (keep the current value if it survives)
+  const fillSel = (id, first, opts) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const v = el.value;
+    el.innerHTML = first + opts;
+    if ([...el.options].some(o => o.value === v)) el.value = v;
+  };
+  const platOpts = PLATFORMS_CFG.map(pl => `<option value="${pl.id}">${pl.icon} ${pl.id}</option>`).join('');
+  fillSel('modalPlatform', '', platOpts);
+  fillSel('tvPlatFilter', '<option value="">All platforms</option>', platOpts);
+  fillSel('tvBulkPlat', '<option value="">Set platform…</option>', platOpts);
+  fillSel('tvBulkType', '<option value="">Set type…</option>',
+    CONTENT_TYPES.map(t => `<option value="${t.id}">${t.label}</option>`).join(''));
+}
+
+function saveFieldConfig() {
+  applyFieldConfig();
+  if (db) db.collection('config').doc('settings').set(
+    { contentTypes: CONTENT_TYPES, platformsCfg: PLATFORMS_CFG }, { merge: true });
+  updateAll();
+}
+
+function editFieldType(i, k, v) { if (!CONTENT_TYPES[i]) return; CONTENT_TYPES[i][k] = v; saveFieldConfig(); }
+function removeFieldType(i) {
+  if (CONTENT_TYPES.length <= 1) { toast('Keep at least one type'); return; }
+  logAction('Removed type', CONTENT_TYPES[i]?.label || '', '🗑');
+  CONTENT_TYPES.splice(i, 1); saveFieldConfig(); renderSettingsTab('fields');
+}
+function addFieldType() {
+  const label = document.getElementById('nfLabel').value.trim();
+  if (!label) { document.getElementById('nfLabel').focus(); return; }
+  const base = label.toLowerCase().replace(/[^a-z0-9]+/g, '') || ('t' + Date.now());
+  let id = base, n = 2;
+  while (CONTENT_TYPES.some(t => t.id === id)) id = base + n++;
+  CONTENT_TYPES.push({ id, label,
+    icon: document.getElementById('nfIcon').value.trim() || '📄',
+    color: document.getElementById('nfColor').value || '#a855f7' });
+  logAction('Added type', label, '➕');
+  saveFieldConfig(); renderSettingsTab('fields');
+}
+function editFieldPlat(i, k, v) { if (!PLATFORMS_CFG[i]) return; PLATFORMS_CFG[i][k] = v; saveFieldConfig(); }
+function removeFieldPlat(i) {
+  if (PLATFORMS_CFG.length <= 1) { toast('Keep at least one platform'); return; }
+  logAction('Removed platform', PLATFORMS_CFG[i]?.id || '', '🗑');
+  PLATFORMS_CFG.splice(i, 1); saveFieldConfig(); renderSettingsTab('fields');
+}
+function addFieldPlat() {
+  const name = document.getElementById('npName').value.trim();
+  if (!name) { document.getElementById('npName').focus(); return; }
+  if (PLATFORMS_CFG.some(pl => pl.id.toLowerCase() === name.toLowerCase())) { toast('Already exists'); return; }
+  PLATFORMS_CFG.push({ id: name, icon: document.getElementById('npIcon').value.trim() || '📌' });
+  logAction('Added platform', name, '➕');
+  saveFieldConfig(); renderSettingsTab('fields');
+}
+
+applyFieldConfig();
+
 // ══ INIT ══
 function updateAll(){
   if (isMobile()) { updateStats(); renderMobile(); return; }
@@ -4675,6 +4900,16 @@ window.addEventListener('resize', () => { if (currentUser) renderCalendar(); });
 document.getElementById('itemModal')?.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeModal(); return; }
   if (e.key === 'Enter' && !e.shiftKey && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); saveItem(); }
+});
+
+// Enter inside a table cell commits it (blur fires the onchange write).
+// The time picker handles its own Enter and stops propagation first.
+document.getElementById('tvBody')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+    e.preventDefault();
+    e.target.dispatchEvent(new Event('change'));   // commit explicitly, don't rely on blur
+    e.target.blur();
+  }
 });
 
 // Theme init from localStorage
