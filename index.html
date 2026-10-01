@@ -140,13 +140,6 @@
     .c-red    .stat-num { color: var(--red); }
     .c-yellow .stat-num { color: var(--yellow); }
     .topbar-right { display: flex; align-items: center; gap: 11px; }
-    .link-btn {
-      display: flex; align-items: center; gap: 5px;
-      background: var(--card); border: 1px solid var(--border); border-radius: 9px;
-      padding: 5px 14px; font-size: 15px; color: var(--text-dim);
-      cursor: pointer; text-decoration: none; transition: all 0.15s; font-family: inherit;
-    }
-    .link-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
     .user-chip {
       display: flex; align-items: center; gap: 8px;
       background: var(--card); border: 1px solid var(--border); border-radius: 9px;
@@ -1332,9 +1325,6 @@
     <button class="tv-ctl" id="undoBtn" style="padding:6px 13px;font-size:14px;font-weight:700;opacity:0.4" onclick="undoLast()" title="Undo last change (Ctrl+Z)">↩ Undo</button>
   </div>
   <div class="topbar-right">
-    <a class="link-btn" href="#" target="_blank">🌐 Website</a>
-    <a class="link-btn" href="#" target="_blank">📁 Drive FC</a>
-    <a class="link-btn" href="#" target="_blank">📸 Instagram</a>
     <div class="divider-v"></div>
     <div class="user-chip" id="userChip">
       <div class="user-dot"></div>
@@ -3336,6 +3326,11 @@ function openModal(id) {
   if (serBar) serBar.style.display = inSeries ? '' : 'none';
 
   document.getElementById('modalOverlay').classList.add('open');
+  // New item → cursor straight into the name, text selected so typing replaces it
+  if (isNew) setTimeout(() => {
+    const t = document.getElementById('modalTitle');
+    if (t) { t.focus(); t.select(); }
+  }, 60);
 }
 function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); currentItemId=null; }
 function closeOnOverlay(e){ if(e.target===document.getElementById('modalOverlay')) closeModal(); }
@@ -4897,7 +4892,7 @@ document.getElementById('filterBar').style.display='flex';
 window.addEventListener('resize', () => { if (currentUser) renderCalendar(); });
 
 // ENTER = save in modal; ESC = close
-document.getElementById('itemModal')?.addEventListener('keydown', e => {
+document.getElementById('modalOverlay').addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeModal(); return; }
   if (e.key === 'Enter' && !e.shiftKey && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); saveItem(); }
 });
